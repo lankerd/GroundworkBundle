@@ -1,0 +1,14 @@
+{% macro menuItem ( name, url, match_routes = [] ) %}
+    {% spaceless %}
+        {% set isActive = app.request.attributes.get('_route') in match_routes %}
+
+        <li {% if isActive %} class="active" {% endif %}>
+            <a href="{{ url }}">
+                {% if name == 'Logout' %}
+                    <i class="fa fa-fw fa-sign-out"></i>
+                {% endif %}
+                {{ name }}
+            </a>
+        </li>
+    {% endspaceless %}
+{% endmacro %}

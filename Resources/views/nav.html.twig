@@ -1,0 +1,19 @@
+{% extends '@LankerdGroundwork/Dashboard/dash-layout.html.twig' %}
+{% import 'LankerdGroundworkBundle:macros:generateMenu.html.twig' as foo %}
+{% block nav %}
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header">
+                <a href="{{ path("dashboard") }}">
+                    CoreEngine
+                </a>
+            </div>
+            <div class="navbar-collapse collapse">
+                    {% block menuItems %}
+                        {% embed '@LankerdGroundwork/MenuItems/groundwork-menu.html.twig' %}
+                        {% endembed %}
+                    {% endblock %}
+            </div>
+        </div>
+    </nav>
+{% endblock %}
