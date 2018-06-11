@@ -1,76 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<title>{{ title|default('CoreEngine') }}</title>
-        <meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-		<meta http-equiv="x-ua-compatible" content="ie=edge">
-		{% block css %}
-			<link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
-			<link href="//fonts.googleapis.com/css?family=PT+Sans:400,400i,700,700i" rel="stylesheet">
-			<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
-			<link rel="stylesheet" href="//cdn.jsdelivr.net/chartist.js/latest/chartist.min.css">
-			<link rel="stylesheet" href="{{ asset('css/toolkit-light.min.css') }}" />
-			<link rel="stylesheet" href="{{ asset('css/screen.css') }}" />
-		{% endblock %}
-
-		{% block javascript %}
-        {# Necessary dashboard theme scripts #}
-        <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
-        <script src="{{ asset('js/toolkit.min.js') }}"></script>
-        <script src="{{ asset('js/tablesorter.min.js') }}"></script>
-        <script src="{{ asset('js/jquery-functions.js') }}"></script>
-        <script src="{{ asset('js/table-to-csv.js') }}"></script>
-        <script src="//cdn.jsdelivr.net/chartist.js/latest/chartist.min.js"></script>
+<head>
+	<title>{{ title|default('CoreEngine') }}</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<meta http-equiv="x-ua-compatible" content="ie=edge">
+    {% block css %}
+		<link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+		<link href="//fonts.googleapis.com/css?family=PT+Sans:400,400i,700,700i" rel="stylesheet">
+		<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+		<link rel="stylesheet" href="//cdn.jsdelivr.net/chartist.js/latest/chartist.min.css">
+		<link rel="stylesheet" href="{{ asset('css/toolkit-light.min.css') }}" />
+		<link rel="stylesheet" href="{{ asset('css/screen.css') }}" />
     {% endblock %}
-	</head>
-	<body>
-		<div class="container-fluid">
-			<div class="row">
-                {% block nav %}
-                    <nav class="navbar">
-                        <div class="container">
-                            <div class="navbar-header">
-                                <a href="{{ path("dashboard") }}">
-                                    CoreEngine
-                                </a>
-                            </div>
-                            <div class="navbar-collapse collapse">
-                                {% block menuItems %}
-                                    {#{% embed '@LankerdGroundwork/MenuItems/groundwork-menu.html.twig' %}#}
-                                    {#{% endembed %}#}
-                                {% endblock %}
-                            </div>
-                        </div>
-                    </nav>
-                {% endblock %}
-			</div>
-		</div>
 
-		<div class="container">
-			<div class="row">
-				<div class="col-sm-12 content">
-					{% for label, flashes in app.session.flashbag.all %}
-						{% for flash in flashes %}
-						<div class="m-t-md alert alert-{{ label }} alert-dismissable">
-							<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-							{{ flash }}
-						</div>
-						{% endfor %}
-					{% endfor %}
+	{% block javascript %}
+	{# Necessary dashboard theme scripts #}
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="{{ asset('js/toolkit.min.js') }}"></script>
+    <script src="{{ asset('js/tablesorter.min.js') }}"></script>
+    <script src="{{ asset('js/jquery-functions.js') }}"></script>
+    <script src="{{ asset('js/table-to-csv.js') }}"></script>
+    <script src="//cdn.jsdelivr.net/chartist.js/latest/chartist.min.js"></script>
+{% endblock %}
+</head>
+<body>
+<div class="container-fluid">
+	<div class="row">
+        {% block nav %}
+			<nav class="navbar">
+				<div class="container">
+					<div class="navbar-header">
+                        {% block applicationTitle %}
+						{% endblock %}
+					</div>
+					<div class="navbar-collapse collapse">
+                        {% block menuItems %}
+                        {% endblock %}
+					</div>
 				</div>
-			</div>
-		</div>
-        {% block content %}
+			</nav>
         {% endblock %}
+	</div>
+</div>
 
-		{% block post_content %}
-		{% endblock %}
+<div class="container">
+	<div class="row">
+		<div class="col-sm-12 content">
+            {% for label, flashes in app.session.flashbag.all %}
+                {% for flash in flashes %}
+					<div class="m-t-md alert alert-{{ label }} alert-dismissable">
+						<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        {{ flash }}
+					</div>
+                {% endfor %}
+            {% endfor %}
+		</div>
+	</div>
+</div>
+{% block content %}
+{% endblock %}
 
-		{% block post_scripts %}
-			{% block javascripts %}
-			{% endblock %}
-		{% endblock %}
-	</body>
+{% block post_content %}
+{% endblock %}
+
+{% block post_scripts %}
+    {% block javascripts %}
+    {% endblock %}
+{% endblock %}
+</body>
 </html>
-

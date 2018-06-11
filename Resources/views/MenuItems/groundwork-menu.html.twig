@@ -1,5 +1,17 @@
 {% extends 'LankerdGroundworkBundle:Dashboard:dash-layout.html.twig' %}
 {% import 'LankerdGroundworkBundle:macros:generateMenu.html.twig' as foo %}
+
+{#
+    If you wish to replace the header navigation "Title" and show something else, use the example below!
+
+    {% block applicationTitle %}
+        <a href="{{ path("lankerd.groundwork.dashboard") }}">
+            Check out my sweet dash! :D
+        </a>
+    {% endblock %}
+
+#}
+
 {% block menuItems %}
     <ul class="nav navbar-nav navbar-top navbar-right">
         {{ foo.menuItem("Logout", path('logout')) }}

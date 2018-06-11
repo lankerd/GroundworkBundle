@@ -1,4 +1,4 @@
-dashboard:
+lankerd.groundwork.dashboard:
     path:     /
     methods: [GET]
     defaults:
