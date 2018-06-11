@@ -18,6 +18,6 @@ class DashboardController extends Controller
     */
     public function indexAction()
     {
-        return $this->render('@LankerdGroundwork/Dashboard/index.html.twig');
+        return $this->render('@LankerdGroundwork/MenuItems/groundwork-menu.html.twig');
     }
 }

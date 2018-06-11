@@ -1,0 +1,5 @@
+dashboard:
+    path:     /
+    methods: [GET]
+    defaults:
+        _controller: LankerdGroundworkBundle:Dashboard:index
