@@ -1,8 +1,8 @@
-lankerd.groundwork.dashboard:
-    path:     /
-    methods: [GET]
-    defaults:
-        _controller: LankerdGroundworkBundle:Dashboard:index
+#lankerd.groundwork.dashboard:
+#    path:     /
+#    methods: [GET]
+#    defaults:
+#        _controller: LankerdGroundworkBundle:Dashboard:index
 
 login:
     path:  /login
