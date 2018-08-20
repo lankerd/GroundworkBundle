@@ -2,7 +2,6 @@
 
 namespace Lankerd\GroundworkBundle\Model;
 
-
 use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\ORM\EntityManager;
 use Symfony\Component\Security\Core\Authorization\AuthorizationChecker;

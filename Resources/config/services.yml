@@ -13,3 +13,7 @@ services:
         class: Lankerd\GroundworkBundle\Twig\IsInstanceOf
         tags:
             - { name: twig.extension }
+
+    groundwork_mailer:
+        class: Lankerd\GroundworkBundle\Services\Mailer
+        arguments: ["@mailer"]
