@@ -1,8 +1,16 @@
-{% macro menuItem ( name, url, match_routes = [] ) %}
+{% macro menuItem ( name, url, match_routes = [], classParams = null ) %}
     {% spaceless %}
         {% set isActive = app.request.attributes.get('_route') in match_routes %}
-
-        <li {% if isActive %} class="active" {% endif %}>
+        {#Sorry for how ugly this is, but it'll get the job done when a developer needs to inject classes#}
+        <li
+        {% if isActive == true and classParams is null %}
+            class="active"
+        {% elseif isActive == true and classParams is not null %}
+            class="active {{ classParams }}"
+        {% elseif isActive == false and classParams is not null %}
+            class="{{ classParams }}"
+        {% endif %}
+        >
             <a href="{{ url }}">
                 {% if name == 'Logout' %}
                     <i class="fa fa-fw fa-sign-out"></i>
