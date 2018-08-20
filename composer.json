@@ -20,7 +20,7 @@
 		"twig/twig": "^2.0",
 		"symfony/templating": "^3.0",
 		"friendsofsymfony/user-bundle": "~2.0",
-		"symfony/swiftmailer-bundle": "^2.6.4",
+		"symfony/swiftmailer-bundle": "^2.6.4"
 	},
 	
 	"require-dev": {
