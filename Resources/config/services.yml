@@ -17,3 +17,8 @@ services:
     groundwork_mailer:
         class: Lankerd\GroundworkBundle\Services\Mailer
         arguments: ["@mailer"]
+
+#    lankerd_groundwork.model.core_function_model:
+#        class: Lankerd\GroundworkBundle\Model\CoreFunctionModel
+##        arguments: ['@doctrine.orm.entity_manager', 'UserBundle\Entity\BillingAddress', '@security.authorization_checker', '@session.flash_bag', '@doctrine.orm.entity_manager']
+#        public: true

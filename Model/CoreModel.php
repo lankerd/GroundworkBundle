@@ -4,11 +4,14 @@ namespace Lankerd\GroundworkBundle\Model;
 
 use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\ORM\EntityManager;
+use Symfony\Component\DependencyInjection\ContainerAwareInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationChecker;
-use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorage;
-use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\HttpFoundation\Session\Flash\FlashBag;
-
+use League\Csv\Exception;
+use League\Csv\Reader;
+use League\Csv\Statement;
+use UserBundle\Utility\ShippingAddressHandler;
 
 /**
  * Class CoreModel
@@ -34,6 +37,8 @@ abstract class CoreModel
     protected $entityManager;
     protected $coreData;
     protected $dataCollection;
+    protected $options;
+    protected $containerAware;
 
     /**
      * CoreModel constructor.
@@ -41,50 +46,22 @@ abstract class CoreModel
      * @param \Doctrine\Common\Persistence\ObjectManager                                 $orm
      * @param                                                                            $class *ExampleCompany\ExampleBundle\Entity\Example*
      * @param \Symfony\Component\Security\Core\Authorization\AuthorizationChecker        $authorizationChecker
-     * @param \Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorage $tokenStorage
      * @param \Symfony\Component\HttpFoundation\Session\Flash\FlashBag                   $flashBag
      * @param \Doctrine\ORM\EntityManager                                                $entityManager
+     * @param \Symfony\Component\DependencyInjection\ContainerInterface                  $containerAware
      */
 
-    public function __construct(ObjectManager $orm, $class, AuthorizationChecker $authorizationChecker, TokenStorage $tokenStorage, FlashBag $flashBag, EntityManager $entityManager)
+    public function __construct(ObjectManager $orm, $class, AuthorizationChecker $authorizationChecker, FlashBag $flashBag, EntityManager $entityManager, ContainerInterface $containerAware)
     {
-        /**
-         * This condition should ensure that if a
-         * "User Token" does not exist, they are
-         * denied access immediately.
-         *
-         * NOTE: This means if anyone extends off this null user tokens will get blocked!!!
-         *
-         */
-
-        if (null === $token = $tokenStorage->getToken()) {
-            throw new AccessDeniedException();
-        }
-
+        $this->containerAware = $containerAware;
         $this->entityManager = $entityManager->createQueryBuilder();
         $this->orm   = $orm;
         $this->repo  = $orm->getRepository($class);
         $metaData    = $orm->getClassMetadata($class);
         $this->class = $metaData->getName();
-        $this->user = $tokenStorage->getToken()->getUser();
         $this->roleCheck = $authorizationChecker;
         $this->flashBag = $flashBag;
     }
-
-
-    /**
-     * Instead of pulling the $user object from a controller and
-     * stuffing $user through a service, we're gonna front-load our Models (AKA: Services),
-     * and try to keep our Controllers thin. Therefore, ALWAYS use this method
-     * of accessing user information from inside of a model!
-     *
-     * @return mixed
-     */
-    public function getUser()
-    {
-        return $this->user;
-    }
-
 
     /**
      * We'll check and see if the entity does exist
@@ -99,67 +76,12 @@ abstract class CoreModel
      * @param $entity object
      * @return string
      */
-    private function checkEntity($entity)
+    protected function checkEntity($entity)
     {
         try {
             $entity->getId();
         } catch (\Exception $e) {
             return "It appears there was no Entity provided!";
-        }
-    }
-
-    /**
-     * Used to check if the "user token" posses the ROLE_SUPER_ADMIN permission to access
-     * certain functionality.
-     *
-     * @param string $role Currently this is only meant to be used to check if a subject possess a particular role
-     *
-     * @param null   $subject
-     *
-     * @return bool
-     */
-    public function isAdmin($role = "ROLE_SUPER_ADMIN", $subject = null)
-    {
-        /**
-         * In the case that this is just an internalized security check,
-         * which pretty much means that no one needed to set the $subject
-         * parameter; we will assume that the "sessions user token" is all we need.
-         *
-         * *########## NOTE ##########*
-         * We grab the current session's user token and extract the user object.
-         * Due to how the entire data structure has been designed, we default to seeing if
-         * the user in question should be accessing the current Model, which will affect whether
-         * the user can access the Controller and View by proxy. Therefore,
-         * when you are setting up a new Model (AKA: Service), make sure you utilize this method
-         * to do all of your verification!
-         *
-         * *########## END NOTE ##########*
-         */
-
-        if ($subject === null){
-            $subject = $this->getUser();
-        }
-
-        return $this->roleCheck->isGranted($role, $subject);
-    }
-
-    /**
-     * This is the "permissions heartbeat" and it should be used
-     * when permissions are ever required from another service!
-     *
-     *
-     * @param string $role
-     * @param null   $entity
-     *
-     * @return bool
-     */
-    public function checkUserPermissions($entity = null, $role = "ROLE_SUPER_ADMIN")
-    {
-        $this->checkEntity($entity);
-        if ($this->isAdmin($role) == true || $this->getUser() == $entity->getUser()){
-            return true;
-        }else{
-            return false;
         }
     }
 
@@ -176,6 +98,244 @@ abstract class CoreModel
     public function create () {
         $class = $this->class;
         return new $class;
+    }
+
+    /**
+     * @param $options
+     *
+     * @return mixed
+     */
+    public function setOptions($options)
+    {
+        $this->options[] = $options;
+        return $this->options;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getOptions()
+    {
+        return $this->options;
+    }
+
+    /**
+     * @param       $str
+     * @param array $noStrip
+     *
+     * @return mixed|null|string|string[]
+     */
+    public function camelCase($str, array $noStrip = [])
+    {
+        $string = preg_replace('/(?<=\\w)(?=[A-Z])/'," $1", $str);
+        $string = trim($string);
+
+        // non-alpha and non-numeric characters become spaces
+        $string = preg_replace('/[^a-z0-9' . implode("", $noStrip) . ']+/i', ' ', $string);
+        $string = trim($string);
+        // uppercase the first character of each word
+        $string = ucwords($string);
+        $string = str_replace(" ", "", $string);
+        $string = lcfirst($string);
+
+        return $string;
+    }
+
+    /*This is temporary, only use it for auto population!!!!!!!*/
+    /**
+     * @param $importPath
+     * @param $filesToImport
+     */
+    public function makeUsers($importPath, $filesToImport)
+    {
+        dump($importPath);
+        for ($x = 0; $x <= 20; $x++){
+            $roles = ['ROLE_RESIDENTIAL_USER'];
+            $randomInt = mt_rand(1, 121213)+$x;
+            $userManager = $this->containerAware->get('fos_user.user_manager');
+            $user = $userManager->createUser();
+            $user->setCreated(new \DateTime());
+            $user->setEmail("test+$randomInt@corephp.com");
+            $user->setUsername("test_$randomInt");
+            $user->setEnabled(true);
+            $user->addRole('ROLE_RESIDENTIAL_USER');
+            $user->setPlainPassword('password');
+            $user->setServiceName('residential');
+            $user->setCustomerName("test$randomInt");
+            $user->setPhoneNumber(4444);
+            for ($y = 0; $y <= 5; $y++){
+                $addresses[] = $this->generateAddresses($user);
+
+                foreach ($addresses as $address) {
+
+                    $shippingAddresses[] = $this->generateAddresses($address, 'shipping_address.csv', 'shipping_address');
+                    dump($shippingAddresses);
+                    die;
+                    $address->addShipping();
+
+                    $user->addBillingAddress($address);
+                }
+            }
+            $userManager->updatePassword($user);
+            $userManager->updateUser($user);
+        }
+    }
+
+    /**
+     * @param        $entity
+     * @param string $fileName
+     * @param string $service
+     *
+     * @throws \Exception
+     */
+    public function generateAddresses($entity, $fileName = 'billing_address.csv', $service = 'billing_address')
+    {
+        $addresses = $this->readCSV($this->containerAware->getParameter('import_directory').$fileName);
+        $entityClass = $this->containerAware->get($service)->create();
+        foreach ($entityClass->properties as $propertyKey => $property) {
+            foreach ($addresses as $address) {
+                foreach ($address as $addressKey => $addressField) {
+//                    if((is_object($property)) && ($addressKey == "shippingAddress")){
+                    if((is_object($property))){
+//                        $addresses = $this->readCSV($this->containerAware->getParameter('import_directory').'shipping_address.csv');
+//                        $entityClass = $this->containerAware->get('shipping_address')->create();
+//
+                        $setMethod = $this->camelCase('set'.ucwords($propertyKey));
+                        $addMethod = $this->camelCase('add'.ucwords($propertyKey));
+                        $getMethod = $this->camelCase('get'.ucwords($propertyKey));
+
+//                        if ($propertyKey == "user"){
+//                            $entity->setMethod();
+//                        }
+
+//
+//                        $serviceKey = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $propertyKey));
+//                        $relatedEntity = $this->containerAware->get($serviceKey)->create();
+//                        $this->generateAddresses($relatedEntity, 'shipping_address.csv', 'shipping_address');
+//                        $entityClass->$addMethod();
+//                        dump($entityClass->properties);
+//                        die;
+                    }
+
+                    if ($addressKey == $propertyKey) {
+                        /*Insert the fields into */
+                        $setMethod = 'set'.ucwords($propertyKey);
+                        $entityClass->$setMethod($addressField);
+                    }
+                }
+            }
+        }
+        return $entityClass;
+    }
+
+    /**
+     * @param array $data
+     *
+     * @throws \Exception
+     */
+//    protected function processEntity(array $data){
+//        foreach ($data as $datum) {
+//            $entityClass = $this->create();
+//
+//            foreach ($entityClass->properties as $propertyKey => $property) {
+//                /**
+//                 * If the Property has a relationship,
+//                 * we will need to start up the import
+//                 * for the inverse side in order for
+//                 * the import to be complete.
+//                 */
+//                if(is_object($property)){
+//                    $addMethod = $this->camelCase('add'.ucwords($propertyKey));
+//                    $getMethod = $this->camelCase('get'.ucwords($propertyKey));
+//
+//                    try {
+//                        $getter = $entityClass->$getMethod();
+//                    } catch (\Exception $e) {
+//                        throw $e;
+//                        continue;
+//                    }
+//
+//                    $serviceKey = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $propertyKey));
+//                    $entityClass->$addMethod($this->containerAware->get($serviceKey)->create());
+//                    dump($entityClass->properties);
+//                    die;
+//                }
+//
+//                foreach ($datum as $datumKey => $singleRow){
+//                    if ($datumKey == $propertyKey ){
+//                        /*Insert the fields into */
+//                        $setMethod = $this->camelCase('set'.ucwords($propertyKey));
+//                        $entityClass->$setMethod($singleRow);
+//                    }
+//                }
+//            }
+//            /*Submit the record to be stored*/
+//            $this->orm->persist($entityClass);
+//            $this->orm->flush();
+//        }
+//    }
+
+    /**
+     * This will process any imported data (Via CSV)
+     * and try to figure out the service to ping off
+     * consequentially collecting the entity tied to
+     * the service, and finish off with the processEntity
+     * function
+     *
+     * @param       $importPath
+     * @param array $filesToImport
+     *
+     * @throws \Exception
+     */
+    public function import($importPath, array $filesToImport)
+    {
+        foreach ($filesToImport as $key => $fileToImport) {
+            /*Strip the extension off of the filename in order to run the file in it's correct */
+            $filename = preg_replace('/\\.[^.\\s]{3,4}$/', '', $fileToImport);
+
+            try {
+                $service = $this->containerAware->get("$filename");
+            } catch (\Exception $e) {
+                unset($filesToImport[$key]);
+                continue;
+            }
+
+            echo "\n=============$filename=============\n";
+            /*Let's remove the oncoming file*/
+            unset($filesToImport[$key]);
+            $this->setOptions($filesToImport);
+            $this->readCSV($importPath.$fileToImport);
+            echo "\n=============$filename=============\n";
+        }
+    }
+
+    /**
+     * @param $fullPath
+     *
+     * @return array
+     * @throws \Exception
+     */
+    protected function readCSV($fullPath)
+    {
+        $csv = Reader::createFromPath($fullPath);
+        $records = array();
+
+        try {
+            $csv->setHeaderOffset(0);
+        } catch (Exception $e) {
+            throw new $e;
+        }
+
+        $stmt = (new Statement());
+        $rows = $stmt->process($csv);
+
+        foreach ($rows as $row) {
+            $records[] = $row;
+        }
+
+        /*Now that the data has been broken up into coherent sets, let's begin to import the records */
+        return $records;
+//        $this->processEntity($records);
     }
 
 }
