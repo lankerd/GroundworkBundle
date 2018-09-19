@@ -19,9 +19,14 @@ class Configuration implements ConfigurationInterface
     {
         $treeBuilder = new TreeBuilder();
         $rootNode = $treeBuilder->root('lankerd_groundwork');
-        // Here you should define the parameters that are allowed to
-        // configure your bundle. See the documentation linked above for
-        // more information on that topic.
+
+        $rootNode
+            ->fixXmlConfig('import_ordering')
+            ->children()
+                ->arrayNode('import_order')
+                    ->scalarPrototype()->end()
+                ->end()
+            ->end();
 
         return $treeBuilder;
     }

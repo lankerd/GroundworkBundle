@@ -141,89 +141,21 @@ abstract class CoreModel
         return $string;
     }
 
-    /*This is temporary, only use it for auto population!!!!!!!*/
     /**
-     * @param $importPath
-     * @param $filesToImport
-     */
-    public function makeUsers($importPath, $filesToImport)
-    {
-        dump($importPath);
-        for ($x = 0; $x <= 20; $x++){
-            $roles = ['ROLE_RESIDENTIAL_USER'];
-            $randomInt = mt_rand(1, 121213)+$x;
-            $userManager = $this->containerAware->get('fos_user.user_manager');
-            $user = $userManager->createUser();
-            $user->setCreated(new \DateTime());
-            $user->setEmail("test+$randomInt@corephp.com");
-            $user->setUsername("test_$randomInt");
-            $user->setEnabled(true);
-            $user->addRole('ROLE_RESIDENTIAL_USER');
-            $user->setPlainPassword('password');
-            $user->setServiceName('residential');
-            $user->setCustomerName("test$randomInt");
-            $user->setPhoneNumber(4444);
-            for ($y = 0; $y <= 5; $y++){
-                $addresses[] = $this->generateAddresses($user);
-
-                foreach ($addresses as $address) {
-
-                    $shippingAddresses[] = $this->generateAddresses($address, 'shipping_address.csv', 'shipping_address');
-                    dump($shippingAddresses);
-                    die;
-                    $address->addShipping();
-
-                    $user->addBillingAddress($address);
-                }
-            }
-            $userManager->updatePassword($user);
-            $userManager->updateUser($user);
-        }
-    }
-
-    /**
-     * @param        $entity
+     * @param object $entity
      * @param string $fileName
      * @param string $service
      *
+     * @return mixed
      * @throws \Exception
      */
-    public function generateAddresses($entity, $fileName = 'billing_address.csv', $service = 'billing_address')
+    public function generateEntity($entity, $fileName = 'billing_address.csv', $service = 'billing_address')
     {
         $addresses = $this->readCSV($this->containerAware->getParameter('import_directory').$fileName);
         $entityClass = $this->containerAware->get($service)->create();
         foreach ($entityClass->properties as $propertyKey => $property) {
-            foreach ($addresses as $address) {
-                foreach ($address as $addressKey => $addressField) {
-//                    if((is_object($property)) && ($addressKey == "shippingAddress")){
-                    if((is_object($property))){
-//                        $addresses = $this->readCSV($this->containerAware->getParameter('import_directory').'shipping_address.csv');
-//                        $entityClass = $this->containerAware->get('shipping_address')->create();
-//
-                        $setMethod = $this->camelCase('set'.ucwords($propertyKey));
-                        $addMethod = $this->camelCase('add'.ucwords($propertyKey));
-                        $getMethod = $this->camelCase('get'.ucwords($propertyKey));
-
-//                        if ($propertyKey == "user"){
-//                            $entity->setMethod();
-//                        }
-
-//
-//                        $serviceKey = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $propertyKey));
-//                        $relatedEntity = $this->containerAware->get($serviceKey)->create();
-//                        $this->generateAddresses($relatedEntity, 'shipping_address.csv', 'shipping_address');
-//                        $entityClass->$addMethod();
-//                        dump($entityClass->properties);
-//                        die;
-                    }
-
-                    if ($addressKey == $propertyKey) {
-                        /*Insert the fields into */
-                        $setMethod = 'set'.ucwords($propertyKey);
-                        $entityClass->$setMethod($addressField);
-                    }
-                }
-            }
+            dump($propertyKey);
+            die;
         }
         return $entityClass;
     }
