@@ -9,19 +9,8 @@ use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 
 class ImportCommand extends ContainerAwareCommand
 {
-//    protected $importPath;
-//
-//    /**
-//     * ComprehensiveImportCommand constructor.
-//     *
-//     * @param $importPath
-//     */
-//
-//    public function __construct($importPath)
-//    {
-//        $this->importPath = $importPath;
-//        parent::__construct();
-//    }
+
+    protected $services;
 
     protected function configure()
     {
@@ -30,37 +19,89 @@ class ImportCommand extends ContainerAwareCommand
             ->setName('groundwork:import:all')
             // the short description shown while running "php bin/console list"
             ->setDescription('Imports all records.');
-            // the full command description shown when running the command with
-            // the "--help" option
-//            ->setHelp(
-//                'This command imports all of the records that will be sent from , to this application.'
-//            )
-            // configure an argument
-//            ->addArgument(
-//                'import_path',
-//                $this->importPath ? InputArgument::OPTIONAL : InputArgument::REQUIRED,
-//                'Where is the full import path located?',
-//                $this->importPath
-//            );
-//            ->addArgument(
-//                'statement_type',
-//                $this->statementType ? InputArgument::OPTIONAL : InputArgument::REQUIRED,
-//                'Which type of statement will we be expecting? (PAMS/ASCEND)',
-//                $this->statementType
-//            );
     }
 
+    /**
+     * @param \Symfony\Component\Console\Input\InputInterface   $input
+     * @param \Symfony\Component\Console\Output\OutputInterface $output
+     *
+     * @return int|null|void
+     */
     public function execute(InputInterface $input, OutputInterface $output)
     {
-//        $statementType = $input->getArgument('statement_type');
-
-        /*Grab the CSV Directory*/
+        /*Grab the CSV Directory from the configuration file*/
         $importPath = $this->getContainer()->getParameter('import_directory');
-
         /*Cut out '..' and '.' when we scan the csv directory, effectively grabbing [all] file [name(s)] in the process*/
         $filesToImport = array_diff(scandir($importPath), array('.', '..'));
-        //dump($this->);
-        die;
-        $this->getContainer()->get('user.model.layout')->makeUsers($importPath, $filesToImport);
+
+        /*Grab all of the services that will be unpacked*/
+        $services = $this->getContainer()->getParameter('lankerd_groundwork.import_services');
+
+        $filenames = [];
+        /*We'll set a global that's watching our service listing[s]*/
+        foreach ($filesToImport as $key => $fileToImport) {
+            /*Strip the extension off of the filename in order to run the file in it's correct */
+            $filenames[] = preg_replace('/\\.[^.\\s]{3,4}$/', '', $fileToImport);
+        }
+
+        $this->services = $filenames;
+
+        $this->processServices($services, $importPath, $filesToImport);
+
+    }
+
+    public function processServices($services, $importPath, $filesToImport)
+    {
+        foreach ($services as $service) {
+            if (is_array($service)) {
+                $this->runServices(key($service), $importPath, $filesToImport);
+                $this->processServices($service, $importPath, $filesToImport);
+            }else{
+                $this->runServices($service, $importPath, $filesToImport);
+            }
+        }
+    }
+
+    /**
+     * @param $service
+     * @param $importPath
+     * @param $filesToImport
+     */
+    private function runServices($service, $importPath, $filesToImport)
+    {
+        if ($service == 'user') {
+                $this->getContainer()->get('user.model.layout')->makeUsers($filesToImport);
+                $this->getContainer()->get('user.model.layout')->setOptions([
+                    'filesToImport' => $filesToImport,
+                    'importPath' => $importPath,
+                    'serviceListing' => $this->services
+                ]);
+        } else {
+            foreach ($filesToImport as $key => $fileToImport) {
+                /*Strip the extension off of the filename in order to run the file in it's correct */
+                $filename = preg_replace('/\\.[^.\\s]{3,4}$/', '', $fileToImport);
+                try {
+                    $this->getContainer()->get($filename);
+                } catch (\Exception $e) {
+                    unset($filesToImport[$key]);
+                    break;
+                }
+                /*Let's remove the oncoming file*/
+                unset($filesToImport[$key]);
+                if ($service == $filename) {
+                    echo "\n=============$filename=============\n";
+                    $this->getContainer()
+                        ->get($service)
+                        ->setOptions([
+                            'filesToImport' => $filesToImport,
+                            'importPath' => $importPath,
+                            'serviceListing' => $this->services
+                        ]);
+                    $this->getContainer()
+                        ->get($service)
+                        ->readCSV($importPath.$fileToImport);
+                }
+            }
+        }
     }
 }

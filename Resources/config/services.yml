@@ -1,8 +1,8 @@
 services:
-    core.subscriber:
-        class: Lankerd\GroundworkBundle\EventListener\CoreSubscriber
-        tags:
-            - { name: doctrine.event_subscriber, connection: default }
+#    core.subscriber:
+#        class: Lankerd\GroundworkBundle\EventListener\CoreSubscriber
+#        tags:
+#            - { name: doctrine.event_subscriber, connection: default }
 
     usort.twig.custom_extension:
         class: Lankerd\GroundworkBundle\Twig\CustomSort

@@ -20,9 +20,21 @@ class LankerdGroundworkExtension extends Extension
     public function load(array $configs, ContainerBuilder $container)
     {
         $configuration = new Configuration();
-        $config = $this->processConfiguration($configuration, $configs);
+        $configuration = $this->processConfiguration($configuration, $configs);
+
+        
+        /**
+         * lankerd_groundwork.import_services
+         *
+         * We will set a parameter that'll hold a list
+         * of the import service(s) the user provided
+         *
+         *
+         */
+        $container->setParameter($this->getAlias().'.import_services', $configuration['import_services']);
 
         $loader = new Loader\YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
         $loader->load('services.yml');
+
     }
 }

@@ -21,11 +21,9 @@ class Configuration implements ConfigurationInterface
         $rootNode = $treeBuilder->root('lankerd_groundwork');
 
         $rootNode
-            ->fixXmlConfig('import_ordering')
+            ->fixXmlConfig('import_service')
             ->children()
-                ->arrayNode('import_order')
-                    ->scalarPrototype()->end()
-                ->end()
+                ->variableNode('import_services')->end()
             ->end();
 
         return $treeBuilder;

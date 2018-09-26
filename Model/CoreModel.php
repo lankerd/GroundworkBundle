@@ -11,6 +11,7 @@ use Symfony\Component\HttpFoundation\Session\Flash\FlashBag;
 use League\Csv\Exception;
 use League\Csv\Reader;
 use League\Csv\Statement;
+use UserBundle\Entity\ShippingAddress;
 use UserBundle\Utility\ShippingAddressHandler;
 
 /**
@@ -39,7 +40,8 @@ abstract class CoreModel
     protected $dataCollection;
     protected $options;
     protected $containerAware;
-
+    protected $parentEntity;
+    protected $stack;
     /**
      * CoreModel constructor.
      *
@@ -149,95 +151,117 @@ abstract class CoreModel
      * @return mixed
      * @throws \Exception
      */
-    public function generateEntity($entity, $fileName = 'billing_address.csv', $service = 'billing_address')
-    {
-        $addresses = $this->readCSV($this->containerAware->getParameter('import_directory').$fileName);
-        $entityClass = $this->containerAware->get($service)->create();
-        foreach ($entityClass->properties as $propertyKey => $property) {
-            dump($propertyKey);
-            die;
-        }
-        return $entityClass;
-    }
-
-    /**
-     * @param array $data
-     *
-     * @throws \Exception
-     */
-//    protected function processEntity(array $data){
-//        foreach ($data as $datum) {
-//            $entityClass = $this->create();
-//
-//            foreach ($entityClass->properties as $propertyKey => $property) {
-//                /**
-//                 * If the Property has a relationship,
-//                 * we will need to start up the import
-//                 * for the inverse side in order for
-//                 * the import to be complete.
-//                 */
-//                if(is_object($property)){
-//                    $addMethod = $this->camelCase('add'.ucwords($propertyKey));
-//                    $getMethod = $this->camelCase('get'.ucwords($propertyKey));
-//
-//                    try {
-//                        $getter = $entityClass->$getMethod();
-//                    } catch (\Exception $e) {
-//                        throw $e;
-//                        continue;
-//                    }
-//
-//                    $serviceKey = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $propertyKey));
-//                    $entityClass->$addMethod($this->containerAware->get($serviceKey)->create());
-//                    dump($entityClass->properties);
-//                    die;
-//                }
-//
-//                foreach ($datum as $datumKey => $singleRow){
-//                    if ($datumKey == $propertyKey ){
-//                        /*Insert the fields into */
-//                        $setMethod = $this->camelCase('set'.ucwords($propertyKey));
-//                        $entityClass->$setMethod($singleRow);
-//                    }
-//                }
-//            }
-//            /*Submit the record to be stored*/
-//            $this->orm->persist($entityClass);
-//            $this->orm->flush();
+//    public function generateEntity($entity, $fileName = 'billing_address.csv', $service = 'billing_address')
+//    {
+//        $addresses = $this->readCSV($this->containerAware->getParameter('import_directory').$fileName);
+//        $entityClass = $this->containerAware->get($service)->create();
+//        foreach ($entityClass->properties as $propertyKey => $property) {
+//            dump($propertyKey);
+//            die;
 //        }
+//        return $entityClass;
 //    }
 
     /**
-     * This will process any imported data (Via CSV)
-     * and try to figure out the service to ping off
-     * consequentially collecting the entity tied to
-     * the service, and finish off with the processEntity
-     * function
-     *
-     * @param       $importPath
-     * @param array $filesToImport
-     *
-     * @throws \Exception
+     * @param array $data
+     * @param null  $parentEntity
      */
-    public function import($importPath, array $filesToImport)
-    {
-        foreach ($filesToImport as $key => $fileToImport) {
-            /*Strip the extension off of the filename in order to run the file in it's correct */
-            $filename = preg_replace('/\\.[^.\\s]{3,4}$/', '', $fileToImport);
+    protected function processEntity(array $data, $parentEntity = null ){
+        foreach ($data as $datum) {
+            /*We'll try to keep track of what already exists*/
+            $updateFlag = 0;
 
-            try {
-                $service = $this->containerAware->get("$filename");
-            } catch (\Exception $e) {
-                unset($filesToImport[$key]);
-                continue;
+            $entityClass = $this->create();
+            /*initialize the properties for us to scan*/
+            $entityClass->getProperties($entityClass);
+
+            foreach ($entityClass->properties as $propertyKey => $property) {
+//
+//                if (strpos($propertyKey, "id") !== false){
+////                    dump($this->repo->findBy(['id' => $property]));
+////                    die;
+//                    if (!empty($this->repo->findBy(['id' => $property]))){
+//                        $updateFlag = 1;
+//                    }
+//                }
+
+
+                /**
+                 * If the Property has a relationship,
+                 * we will need to start up the import
+                 * for the inverse side in order for
+                 * the import to be complete.
+                 */
+
+                if ($parentEntity != null) {
+                    foreach ($parentEntity->properties as $parentPropertyKey => $parentProperty) {
+                        $serviceKey = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $parentPropertyKey));
+                        if (in_array($serviceKey, $this->options[0]['serviceListing'])){
+                            $addMethod = $this->camelCase('add'.ucwords($parentPropertyKey));
+                            $setMethod = $this->camelCase('set'.ucwords($parentPropertyKey));
+
+                            if (in_array($addMethod, $parentEntity->getMethods($parentEntity))){
+                                $parentEntity->$addMethod($entityClass);
+                            }
+
+//                            if (in_array($setMethod, $parentEntity->getMethods($parentEntity))){
+//                                dump($var)
+//                                //$parentEntity->$setMethod($entityClass);
+//                            }
+                        }
+                    }
+                }
+
+                if(!is_object($property)){
+                    foreach ($datum as $datumKey => $singleRow){
+                        if ($datumKey == $propertyKey ){
+                            /*Insert the fields into */
+                            $setMethod = $this->camelCase('set'.ucwords($propertyKey));
+                            $entityClass->$setMethod($singleRow);
+                        }
+                    }
+                }
+
+                if(is_object($property)){
+
+                    $addMethod = $this->camelCase('add'.ucwords($propertyKey));
+                    $getMethod = $this->camelCase('get'.ucwords($propertyKey));
+
+
+                    if (in_array("addUser", $entityClass->getMethods($entityClass))){
+                        $users = $this->containerAware->get('fos_user.user_manager')->findUsers();
+                        $user = $users[mt_rand(1, count($users))];
+                        $entityClass->addUser($user);
+                    }
+
+                    if (in_array("setFuelType", $entityClass->getMethods($entityClass))){
+                        $fuelTypes = $this->containerAware->get('fuel_type')->repo->findAll();
+                        $fuelType = $fuelTypes[mt_rand(1, count($fuelTypes))];
+                        $entityClass->setFuelType($fuelType);
+                    }
+
+                    $serviceKey = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $propertyKey));
+                    /*This essentially means that the path and service both exist*/
+                    if (in_array($serviceKey, $this->options[0]['serviceListing'])){
+
+                        /*Handles DB Relationship service loading*/
+                        $childEntityService = $this->containerAware->get($serviceKey);
+                        $childEntityService->setOptions($this->options[0]);
+                        //$childEntityService->parentEntity = $entityClass;
+                        /*Begin a slight recursive loop in child class*/
+                        $childEntityService->readCSV($this->options[0]['importPath'].$serviceKey.'.csv', $entityClass);
+                    }
+                }
             }
 
-            echo "\n=============$filename=============\n";
-            /*Let's remove the oncoming file*/
-            unset($filesToImport[$key]);
-            $this->setOptions($filesToImport);
-            $this->readCSV($importPath.$fileToImport);
-            echo "\n=============$filename=============\n";
+
+            /*Submit the record to be stored*/
+            if ($updateFlag == 0) {
+                $this->orm->persist($entityClass);
+                $this->orm->flush();
+            } else {
+                $this->orm->flush();
+            }
         }
     }
 
@@ -247,7 +271,7 @@ abstract class CoreModel
      * @return array
      * @throws \Exception
      */
-    protected function readCSV($fullPath)
+    public function readCSV($fullPath, $parentEntity = null)
     {
         $csv = Reader::createFromPath($fullPath);
         $records = array();
@@ -264,10 +288,9 @@ abstract class CoreModel
         foreach ($rows as $row) {
             $records[] = $row;
         }
-
         /*Now that the data has been broken up into coherent sets, let's begin to import the records */
-        return $records;
-//        $this->processEntity($records);
+//        return $records;
+        $this->processEntity($records, $parentEntity);
     }
 
 }
