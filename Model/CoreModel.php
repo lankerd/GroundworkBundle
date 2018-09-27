@@ -4,6 +4,8 @@ namespace Lankerd\GroundworkBundle\Model;
 
 use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\ORM\EntityManager;
+use Lankerd\GroundworkBundle\Event\ObjectConditionalsEvent;
+use Lankerd\GroundworkBundle\LankerdGroundworkEvents;
 use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationChecker;
@@ -42,6 +44,8 @@ abstract class CoreModel
     protected $containerAware;
     protected $parentEntity;
     protected $stack;
+    protected $migrationConditionArguments;
+
     /**
      * CoreModel constructor.
      *
@@ -66,6 +70,14 @@ abstract class CoreModel
     }
 
     /**
+     * This will allow for us to bridge
+     * back over to the handler and take
+     * in any possible conditions the core
+     * migration should adhere to during migration!
+     */
+    abstract protected function migrationConditions();
+
+    /**
      * We'll check and see if the entity does exist
      * by simply checking to see if the provided entity
      * has an Id we can grab.
@@ -85,40 +97,6 @@ abstract class CoreModel
         } catch (\Exception $e) {
             return "It appears there was no Entity provided!";
         }
-    }
-
-    /**
-     * Used to quickly create a new class,
-     * complete fluff function, does not serve
-     * a critical role and will probably be removed
-     * if found to be too circumstantial.
-     *
-     * TODO: Remove this function if it begins to seem like unnecessary bloat.
-     *
-     * @return mixed
-     */
-    public function create () {
-        $class = $this->class;
-        return new $class;
-    }
-
-    /**
-     * @param $options
-     *
-     * @return mixed
-     */
-    public function setOptions($options)
-    {
-        $this->options[] = $options;
-        return $this->options;
-    }
-
-    /**
-     * @return mixed
-     */
-    public function getOptions()
-    {
-        return $this->options;
     }
 
     /**
@@ -144,47 +122,16 @@ abstract class CoreModel
     }
 
     /**
-     * @param object $entity
-     * @param string $fileName
-     * @param string $service
-     *
-     * @return mixed
-     * @throws \Exception
-     */
-//    public function generateEntity($entity, $fileName = 'billing_address.csv', $service = 'billing_address')
-//    {
-//        $addresses = $this->readCSV($this->containerAware->getParameter('import_directory').$fileName);
-//        $entityClass = $this->containerAware->get($service)->create();
-//        foreach ($entityClass->properties as $propertyKey => $property) {
-//            dump($propertyKey);
-//            die;
-//        }
-//        return $entityClass;
-//    }
-
-    /**
      * @param array $data
-     * @param null  $parentEntity
+     * @param object  $parentEntity
      */
     protected function processEntity(array $data, $parentEntity = null ){
         foreach ($data as $datum) {
-            /*We'll try to keep track of what already exists*/
-            $updateFlag = 0;
-
-            $entityClass = $this->create();
-            /*initialize the properties for us to scan*/
-            $entityClass->getProperties($entityClass);
+            $updateFlag = 0; //Let's try to keep track of what already exists
+            $entityClass = $this->create(); //Create the Entity
+            $entityClass->getProperties($entityClass); //Initialize the properties for us to scan
 
             foreach ($entityClass->properties as $propertyKey => $property) {
-//
-//                if (strpos($propertyKey, "id") !== false){
-////                    dump($this->repo->findBy(['id' => $property]));
-////                    die;
-//                    if (!empty($this->repo->findBy(['id' => $property]))){
-//                        $updateFlag = 1;
-//                    }
-//                }
-
 
                 /**
                  * If the Property has a relationship,
@@ -192,41 +139,54 @@ abstract class CoreModel
                  * for the inverse side in order for
                  * the import to be complete.
                  */
-
                 if ($parentEntity != null) {
                     foreach ($parentEntity->properties as $parentPropertyKey => $parentProperty) {
                         $serviceKey = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $parentPropertyKey));
                         if (in_array($serviceKey, $this->options[0]['serviceListing'])){
                             $addMethod = $this->camelCase('add'.ucwords($parentPropertyKey));
-                            $setMethod = $this->camelCase('set'.ucwords($parentPropertyKey));
-
                             if (in_array($addMethod, $parentEntity->getMethods($parentEntity))){
                                 $parentEntity->$addMethod($entityClass);
                             }
-
-//                            if (in_array($setMethod, $parentEntity->getMethods($parentEntity))){
-//                                dump($var)
-//                                //$parentEntity->$setMethod($entityClass);
-//                            }
                         }
                     }
                 }
 
+                /**
+                 * If there is a property for us to interact
+                 * with we will set it.
+                 */
                 if(!is_object($property)){
                     foreach ($datum as $datumKey => $singleRow){
                         if ($datumKey == $propertyKey ){
                             /*Insert the fields into */
                             $setMethod = $this->camelCase('set'.ucwords($propertyKey));
                             $entityClass->$setMethod($singleRow);
+
+//                            if (in_array("setBillingAddressPamsId", $entityClass->getMethods($entityClass))){
+//
+//                            }
                         }
                     }
                 }
 
+                /**
+                 * If there are any relationships, let's try to handle them.
+                 */
                 if(is_object($property)){
-
                     $addMethod = $this->camelCase('add'.ucwords($propertyKey));
                     $getMethod = $this->camelCase('get'.ucwords($propertyKey));
 
+                    /**
+                     * We'll need to start setting
+                     */
+
+                    /**
+                     * Let's grab any possible migration condition(s)
+                     * that may be required by the Entity being processed
+                     */
+//                    foreach ($this->migrationConditions() as $migrationCondition) {
+//                        $this->$migrationCondition;
+//                    }
 
                     if (in_array("addUser", $entityClass->getMethods($entityClass))){
                         $users = $this->containerAware->get('fos_user.user_manager')->findUsers();
@@ -234,11 +194,11 @@ abstract class CoreModel
                         $entityClass->addUser($user);
                     }
 
-                    if (in_array("setFuelType", $entityClass->getMethods($entityClass))){
-                        $fuelTypes = $this->containerAware->get('fuel_type')->repo->findAll();
-                        $fuelType = $fuelTypes[mt_rand(1, count($fuelTypes))];
-                        $entityClass->setFuelType($fuelType);
-                    }
+//                    if (in_array("setFuelType", $entityClass->getMethods($entityClass))){
+//                        $fuelTypes = $this->containerAware->get('fuel_type')->repo->findAll();
+//                        $fuelType = $fuelTypes[mt_rand(0, count($fuelTypes))];
+//                        $entityClass->setFuelType($fuelType);
+//                    }
 
                     $serviceKey = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $propertyKey));
                     /*This essentially means that the path and service both exist*/
@@ -291,6 +251,56 @@ abstract class CoreModel
         /*Now that the data has been broken up into coherent sets, let's begin to import the records */
 //        return $records;
         $this->processEntity($records, $parentEntity);
+    }
+
+    /**
+     * Used to quickly create a new class,
+     * complete fluff function, does not serve
+     * a critical role and will probably be removed
+     * if found to be too circumstantial.
+     *
+     * TODO: Remove this function if it begins to seem like unnecessary bloat.
+     *
+     * @return mixed
+     */
+    public function create () {
+        $class = $this->class;
+        return new $class;
+    }
+
+    /**
+     * @param $options
+     *
+     * @return mixed
+     */
+    public function setOptions($options)
+    {
+        $this->options[] = $options;
+        return $this->options;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getOptions()
+    {
+        return $this->options;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getMigrationConditionArguments()
+    {
+        return $this->migrationConditionArguments;
+    }
+
+    /**
+     * @param mixed $migrationConditionArguments
+     */
+    public function setMigrationConditionArguments($migrationConditionArguments): void
+    {
+        $this->migrationConditionArguments[] = $migrationConditionArguments;
     }
 
 }
