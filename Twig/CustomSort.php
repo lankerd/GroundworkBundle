@@ -10,7 +10,7 @@ class CustomSort extends \Twig_Extension
     public function getFilters()
 	{
 		return array(
-			new \Twig_SimpleFilter('usort', array($this, 'usortFilter')),
+			new \Twig_Filter('usort', array($this, 'usortFilter')),
 		);
 	}
 
