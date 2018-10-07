@@ -2,7 +2,7 @@
 
 namespace Lankerd\GroundworkBundle\Twig;
 
-class CustomSort extends \Twig_Extension
+class GroundworkTwig extends \Twig_Extension
 {
     /**
      * @return array|\Twig_Filter[]
@@ -10,9 +10,17 @@ class CustomSort extends \Twig_Extension
     public function getFilters()
 	{
 		return array(
-			new \Twig_Filter('usort', array($this, 'usortFilter')),
+		    new \Twig_Filter('usort', array($this, 'usortFilter')),
+            new \Twig_Filter('instanceOf', array($this, 'isInstanceOf')),
 		);
 	}
+
+	public function getFunctions()
+    {
+        return array(
+            new \Twig_Function('die', array($this, 'die')),
+        );
+    }
 
     /**
      * Okay, this has a bit more of an obscure
@@ -46,4 +54,19 @@ class CustomSort extends \Twig_Extension
 
 		return $item;
 	}
+
+    /**
+     * @param $var mixed
+     * @param $instance
+     *
+     * @return bool
+     */
+    public function isInstanceOf($var, $instance){
+        return $var instanceof $instance;
+    }
+
+	public function die()
+    {
+        die();
+    }
 }
