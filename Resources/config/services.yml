@@ -5,12 +5,7 @@ services:
 #            - { name: doctrine.event_subscriber, connection: default }
 
     usort.twig.custom_extension:
-        class: Lankerd\GroundworkBundle\Twig\CustomSort
-        tags:
-            - { name: twig.extension }
-
-    is_instance_of.twig.custom_extension:
-        class: Lankerd\GroundworkBundle\Twig\IsInstanceOf
+        class: Lankerd\GroundworkBundle\Twig\GroundworkTwig
         tags:
             - { name: twig.extension }
 
