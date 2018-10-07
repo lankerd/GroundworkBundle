@@ -7,7 +7,7 @@ class IsInstanceOf extends \Twig_Extension
 	public function getFilters()
 	{
 		return array(
-			new \Twig_SimpleFilter('instanceOf', array($this, 'isInstanceOf')),
+			new \Twig_Filter('instanceOf', array($this, 'isInstanceOf')),
 		);
 	}
 
