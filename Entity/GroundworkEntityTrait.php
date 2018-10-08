@@ -63,18 +63,9 @@ trait GroundworkEntityTrait
      * @return string
      * @throws \ReflectionException
      */
-    public function getClassName()
+    public function getClassReflection()
     {
-        return (new ReflectionClass($this))->getProperties();
-    }
-
-    /**
-     * This is how we can gain access to properties
-     * when generating super generic views!
-     */
-    public function getValueForKey($property)
-    {
-        return $this->$property;
+        return (new ReflectionClass($this));
     }
 
 }
