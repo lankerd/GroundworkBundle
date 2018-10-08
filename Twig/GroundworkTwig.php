@@ -15,7 +15,10 @@ class GroundworkTwig extends \Twig_Extension
 		);
 	}
 
-	public function getFunctions()
+    /**
+     * @return array|\Twig_Filter[]
+     */
+    public function getFunctions()
     {
         return array(
             new \Twig_Function('die', array($this, 'die')),
