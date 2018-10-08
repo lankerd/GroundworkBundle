@@ -9,7 +9,6 @@ use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 
 class ImportCommand extends ContainerAwareCommand
 {
-
     protected $services;
 
     protected function configure()

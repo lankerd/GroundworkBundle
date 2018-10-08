@@ -2,6 +2,8 @@
 
 namespace Lankerd\GroundworkBundle\Entity;
 
+use ReflectionClass;
+
 /**
  * Groundwork Entity
  */
@@ -42,4 +44,37 @@ trait GroundworkEntityTrait
         $this->methods = get_class_methods($class);
         return $this->methods;
     }
+
+    /**
+     * @return array
+     */
+    public function getObjectsOfClass()
+    {
+        $objects = array();
+        foreach ($this->getProperties($this) as $property) {
+            if (is_object($property)) {
+                $objects[] = $property;
+            }
+        }
+        return $objects;
+    }
+
+    /**
+     * @return string
+     * @throws \ReflectionException
+     */
+    public function getClassName()
+    {
+        return (new ReflectionClass($this))->getProperties();
+    }
+
+    /**
+     * This is how we can gain access to properties
+     * when generating super generic views!
+     */
+    public function getValueForKey($property)
+    {
+        return $this->$property;
+    }
+
 }
