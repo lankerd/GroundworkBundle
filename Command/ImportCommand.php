@@ -36,16 +36,20 @@ class ImportCommand extends ContainerAwareCommand
         /*Grab all of the services that will be unpacked*/
         $services = $this->getContainer()->getParameter('lankerd_groundwork.import_services');
 
-        $filenames = [];
+        $trimmedFilesToImport =[];
+        $fileNames = [];
         /*We'll set a global that's watching our service listing[s]*/
         foreach ($filesToImport as $key => $fileToImport) {
-            /*Strip the extension off of the filename in order to run the file in it's correct */
-            $filenames[] = preg_replace('/\\.[^.\\s]{3,4}$/', '', $fileToImport);
+            if (!empty(strpos($fileToImport, '.csv'))){
+                /*Strip the extension off of the filename*/
+                $fileNames[] = preg_replace('/\\.[^.\\s]{3,4}$/', '', $fileToImport);
+                $trimmedFilesToImport[] = $fileToImport;
+            }
         }
 
-        $this->services = $filenames;
+        $this->services = $fileNames;
 
-        $this->processServices($services, $importPath, $filesToImport);
+        $this->processServices($services, $importPath, $trimmedFilesToImport);
 
     }
 
@@ -65,9 +69,12 @@ class ImportCommand extends ContainerAwareCommand
      * @param $service
      * @param $importPath
      * @param $filesToImport
+     *
+     * @throws \Exception
      */
     private function runServices($service, $importPath, $filesToImport)
     {
+
         if ($service == 'user') {
                 $this->getContainer()->get('user.model.layout')->makeUsers($filesToImport);
                 $this->getContainer()->get('user.model.layout')->setOptions([
@@ -83,7 +90,7 @@ class ImportCommand extends ContainerAwareCommand
                     $this->getContainer()->get($filename);
                 } catch (\Exception $e) {
                     unset($filesToImport[$key]);
-                    break;
+                    continue;
                 }
                 /*Let's remove the oncoming file*/
                 unset($filesToImport[$key]);
@@ -94,7 +101,8 @@ class ImportCommand extends ContainerAwareCommand
                         ->setOptions([
                             'filesToImport' => $filesToImport,
                             'importPath' => $importPath,
-                            'serviceListing' => $this->services
+                            'serviceListing' => $this->services,
+                            'currentService' => $service
                         ]);
                     $this->getContainer()
                         ->get($service)

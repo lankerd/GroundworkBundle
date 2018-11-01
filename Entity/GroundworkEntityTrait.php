@@ -9,10 +9,8 @@ use ReflectionClass;
  */
 trait GroundworkEntityTrait
 {
-    public $properties;
-    public $methods;
-
     /**
+     * @deprecated Use "$classPlaceholder->getClassReflection()->getProperties()"
      * Get Properties
      * This'll be used in order to retrieve
      * a list of properties for all Entities.
@@ -24,34 +22,90 @@ trait GroundworkEntityTrait
      * could benefit from a simple property
      * lister.
      *
-     * @param $object
-     *
      * @return array
+     * @throws \ReflectionException
      */
-    public function getProperties($object)
+    public function getProperties()
     {
-        $this->properties = get_object_vars($object);
-        return $this->properties;
+        $propertyNames = array();
+        foreach ($this->getClassReflection()->getProperties() as $property) {
+            $property->setAccessible(true);
+            if (!is_object($property->getValue($this))){
+                if (preg_match('/@var\s+([^\s]+)/', $property->getDocComment(), $matches)) {
+                    list(, $type) = $matches;
+                    if (strstr($type, 'int') || strstr($type, 'string') || strstr($type, 'boolean') ){
+                        $propertyNames[] = $property->getName();
+                    }
+                }
+            }
+        }
+        return $propertyNames;
+    }
+
+
+    public function freePropertiesValues()
+    {
+        $propertyNames = null;
+
+        foreach ($this->getClassReflection()->getProperties() as $property) {
+            $property->setAccessible(true);
+        }
+
+        return $propertyNames;
     }
 
     /**
-     * @param $class
+     * @param string $filter
+     *
+     * POSSIBLE VALUES:
+     * 0 = NON-OBJECT-VALUES
+     * 1 = ALL-VALUES
      *
      * @return array
+     * @throws \ReflectionException
      */
-    public function getMethods($class)
+    public function getPropertyValues($filter = 0)
     {
-        $this->methods = get_class_methods($class);
-        return $this->methods;
+        $propertyValues = array();
+
+        foreach ($this->getClassReflection()->getProperties() as $property) {
+            $property->setAccessible(true);
+            if ($filter == 0){
+                if (!is_object($property->getValue($this))){
+                    $propertyValues[$property->getName()] = $property->getValue($this);
+                }
+            } else{
+                $propertyValues[$property->getName()] = $property->getValue($this);
+            }
+        }
+
+        return $propertyValues;
+    }
+
+    /**
+     * @deprecated Use "$classPlaceholder->getClassReflection()->getMethods()"
+     * @return array
+     * @throws \ReflectionException
+     */
+    public function getMethods()
+    {
+        $methodNames = array();
+
+        foreach ($this->getClassReflection()->getMethods() as $method) {
+            $methodNames[] = $method->getName();
+        }
+
+        return $methodNames;
     }
 
     /**
      * @return array
+     * @throws \ReflectionException
      */
     public function getObjectsOfClass()
     {
         $objects = array();
-        foreach ($this->getProperties($this) as $property) {
+        foreach ($this->getClassReflection()->getProperties() as $property) {
             if (is_object($property)) {
                 $objects[] = $property;
             }
@@ -60,7 +114,7 @@ trait GroundworkEntityTrait
     }
 
     /**
-     * @return string
+     * @return ReflectionClass
      * @throws \ReflectionException
      */
     public function getClassReflection()

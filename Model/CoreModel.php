@@ -2,19 +2,17 @@
 
 namespace Lankerd\GroundworkBundle\Model;
 
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Persistence\ObjectManager;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManager;
-use Lankerd\GroundworkBundle\Event\ObjectConditionalsEvent;
-use Lankerd\GroundworkBundle\LankerdGroundworkEvents;
-use Symfony\Component\DependencyInjection\ContainerAwareInterface;
+use PDO;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationChecker;
 use Symfony\Component\HttpFoundation\Session\Flash\FlashBag;
 use League\Csv\Exception;
 use League\Csv\Reader;
 use League\Csv\Statement;
-use UserBundle\Entity\ShippingAddress;
-use UserBundle\Utility\ShippingAddressHandler;
 
 /**
  * Class CoreModel
@@ -23,8 +21,6 @@ use UserBundle\Utility\ShippingAddressHandler;
  * the permission heartbeat! preventing any invalid/non-existent user sessions
  * from ever accessing other models/services, which means the
  * Controllers will be protected too (if models/services are being correctly used)!
- *
- * NOTE: I highly suggest extending off of the @CoreFunctionModel!
  *
  * @package CoreBundle\Model
  * @author  Julian Lankerd <julianlankerd@gmail.com>
@@ -88,7 +84,7 @@ abstract class CoreModel
      *
      *
      * @param $entity object
-     * @return string
+     * @return boolean
      */
     protected function checkEntity($entity)
     {
@@ -97,6 +93,7 @@ abstract class CoreModel
         } catch (\Exception $e) {
             return "It appears there was no Entity provided!";
         }
+        return true;
     }
 
     /**
@@ -122,114 +119,107 @@ abstract class CoreModel
     }
 
     /**
-     * @param array $data
-     * @param object  $parentEntity
+     * @param array  $data
+     *
+     * @throws \Doctrine\Common\Persistence\Mapping\MappingException
+     * @throws \Doctrine\DBAL\DBALException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
-    protected function processEntity(array $data, $parentEntity = null ){
-        foreach ($data as $datum) {
-            $updateFlag = 0; //Let's try to keep track of what already exists
+    protected function processEntity(array $data)
+    {
+        $this->entityManager->getEntityManager()->getConfiguration()->setSQLLogger(null);
+        foreach ($data as $key => $datum) {
+            /*Clears doctrine out every 25 queries*/
+            if ($key % 25 == 0) {
+                $this->entityManager->getEntityManager()->flush(); $this->entityManager->getEntityManager()->clear();
+            }
+
             $entityClass = $this->create(); //Create the Entity
-            $entityClass->getProperties($entityClass); //Initialize the properties for us to scan
 
-            foreach ($entityClass->properties as $propertyKey => $property) {
+            $tableFields = '';
+            $doctrineFieldAliases = '';
+            $doctrineAliasArguments = array();
+            $entityFieldTypes = array();
 
-                /**
-                 * If the Property has a relationship,
-                 * we will need to start up the import
-                 * for the inverse side in order for
-                 * the import to be complete.
-                 */
-                if ($parentEntity != null) {
-                    foreach ($parentEntity->properties as $parentPropertyKey => $parentProperty) {
-                        $serviceKey = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $parentPropertyKey));
-                        if (in_array($serviceKey, $this->options[0]['serviceListing'])){
-                            $addMethod = $this->camelCase('add'.ucwords($parentPropertyKey));
-                            if (in_array($addMethod, $parentEntity->getMethods($parentEntity))){
-                                $parentEntity->$addMethod($entityClass);
-                            }
-                        }
-                    }
-                }
-
-                /**
-                 * If there is a property for us to interact
-                 * with we will set it.
-                 */
-                if(!is_object($property)){
-                    foreach ($datum as $datumKey => $singleRow){
-                        if ($datumKey == $propertyKey ){
-                            /*Insert the fields into */
-                            $setMethod = $this->camelCase('set'.ucwords($propertyKey));
-                            $entityClass->$setMethod($singleRow);
-
-//                            if (in_array("setBillingAddressPamsId", $entityClass->getMethods($entityClass))){
-//
-//                            }
-                        }
-                    }
-                }
-
-                /**
-                 * If there are any relationships, let's try to handle them.
-                 */
-                if(is_object($property)){
-                    $addMethod = $this->camelCase('add'.ucwords($propertyKey));
-                    $getMethod = $this->camelCase('get'.ucwords($propertyKey));
-
-                    /**
-                     * We'll need to start setting
-                     */
-
-                    /**
-                     * Let's grab any possible migration condition(s)
-                     * that may be required by the Entity being processed
-                     */
-//                    foreach ($this->migrationConditions() as $migrationCondition) {
-//                        $this->$migrationCondition;
-//                    }
-
-                    if (in_array("addUser", $entityClass->getMethods($entityClass))){
-                        $users = $this->containerAware->get('fos_user.user_manager')->findUsers();
-                        $user = $users[mt_rand(1, count($users))];
-                        $entityClass->addUser($user);
-                    }
-
-//                    if (in_array("setFuelType", $entityClass->getMethods($entityClass))){
-//                        $fuelTypes = $this->containerAware->get('fuel_type')->repo->findAll();
-//                        $fuelType = $fuelTypes[mt_rand(0, count($fuelTypes))];
-//                        $entityClass->setFuelType($fuelType);
-//                    }
-
-                    $serviceKey = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $propertyKey));
-                    /*This essentially means that the path and service both exist*/
-                    if (in_array($serviceKey, $this->options[0]['serviceListing'])){
-
-                        /*Handles DB Relationship service loading*/
-                        $childEntityService = $this->containerAware->get($serviceKey);
-                        $childEntityService->setOptions($this->options[0]);
-                        //$childEntityService->parentEntity = $entityClass;
-                        /*Begin a slight recursive loop in child class*/
-                        $childEntityService->readCSV($this->options[0]['importPath'].$serviceKey.'.csv', $entityClass);
+            foreach ($entityClass->getClassReflection()->getProperties() as $property) {
+                $property->setAccessible(true);
+                if (!is_object($property->getValue($entityClass))){
+                    /*Grab the field type of each property in the class*/
+                    if (preg_match('/@var\s+([^\s]+)/', $property->getDocComment(), $matches)) {
+                        list(, $type) = $matches;
+                        $entityFieldTypes[strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $property->getName()))] = $type;
                     }
                 }
             }
 
+            foreach ($entityClass->getProperties() as $propertyKey => $property) {
+                $prettyProperty= strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $property));
+                if ($propertyKey == 0 || $propertyKey == 1) {
+                    if ($property == "id"){
+                        /*Skip the id property because the "id" should always be auto-incremented*/
+                    }else{
+                        if (isset($datum[ucfirst($property)])){
+                            $doctrineAliasArguments[$prettyProperty] = $datum[ucfirst($property)];
+                        }else{
+                            $doctrineAliasArguments[$prettyProperty] = null;
+                        }
 
-            /*Submit the record to be stored*/
-            if ($updateFlag == 0) {
-                $this->orm->persist($entityClass);
-                $this->orm->flush();
-            } else {
-                $this->orm->flush();
+                        $tableFields .= '`'.$prettyProperty.'`';
+                        $doctrineFieldAliases .= ':'.$prettyProperty;
+                    }
+                }else{
+                    if (isset($datum[ucfirst($property)])){
+                        $doctrineAliasArguments[$prettyProperty] = $datum[ucfirst($property)];
+                    }else{
+                        $doctrineAliasArguments[$prettyProperty] = null;
+                    }
+                    $tableFields .= ', `'.$prettyProperty.'`';
+                    $doctrineFieldAliases .= ', :'.$prettyProperty.'';
+                }
             }
+
+            $sql = "INSERT INTO `".$this->getOptions()[0]['currentService']."` (".$tableFields.") VALUES (".$doctrineFieldAliases.")";
+            $em = $this->entityManager->getEntityManager();
+            $stmt = $em->getConnection()->prepare($sql);
+            foreach ($doctrineAliasArguments as $argumentKey => $argument) {
+                $trimmedArgument = trim($argument);
+                if (in_array($argumentKey, array_keys($entityFieldTypes))){
+                    if (strstr($entityFieldTypes[$argumentKey], 'int')){
+                        if (!empty($trimmedArgument)){
+                            $integerArgument = (integer) $trimmedArgument;
+                            $stmt->bindParam(':'.$argumentKey, $integerArgument, ParameterType::INTEGER);
+                        }else{
+                            $nullField = null;
+                            $stmt->bindValue(':'.$argumentKey, $nullField, ParameterType::NULL);
+                        }
+                    }
+                    if (strstr($entityFieldTypes[$argumentKey], 'string')){
+                        /*Check for weird encoding issues they might arise*/
+                        if(mb_detect_encoding($trimmedArgument, 'UTF-8', true) == false){
+                            /**
+                             * Mies well just clear the issues. PHP can barely
+                             * handle the kind of encoding issues
+                             * most people are going to have.
+                             */
+                            $trimmedArgument = mb_convert_encoding($trimmedArgument, 'UTF-8', 'pass');
+                        }
+                        $stmt->bindValue(':'.$argumentKey, $trimmedArgument);
+                    }
+                }
+            }
+            $stmt->execute();
         }
     }
 
     /**
-     * @param $fullPath
+     * @param      $fullPath
+     * @param null $parentEntity
      *
-     * @return array
-     * @throws \Exception
+     * @throws \Doctrine\Common\Persistence\Mapping\MappingException
+     * @throws \Doctrine\DBAL\DBALException
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
      */
     public function readCSV($fullPath, $parentEntity = null)
     {
@@ -249,7 +239,6 @@ abstract class CoreModel
             $records[] = $row;
         }
         /*Now that the data has been broken up into coherent sets, let's begin to import the records */
-//        return $records;
         $this->processEntity($records, $parentEntity);
     }
 
