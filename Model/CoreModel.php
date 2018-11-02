@@ -179,7 +179,7 @@ abstract class CoreModel
                 }
             }
 
-            $sql = "INSERT INTO `".$this->getOptions()[0]['currentService']."` (".$tableFields.") VALUES (".$doctrineFieldAliases.")";
+            $sql = "REPLACE INTO `".$this->getOptions()[0]['currentService']."` (".$tableFields.") VALUES (".$doctrineFieldAliases.")";
             $em = $this->entityManager->getEntityManager();
             $stmt = $em->getConnection()->prepare($sql);
             foreach ($doctrineAliasArguments as $argumentKey => $argument) {
