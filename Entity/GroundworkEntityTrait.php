@@ -30,12 +30,10 @@ trait GroundworkEntityTrait
         $propertyNames = array();
         foreach ($this->getClassReflection()->getProperties() as $property) {
             $property->setAccessible(true);
-            if (!is_object($property->getValue($this))){
-                if (preg_match('/@var\s+([^\s]+)/', $property->getDocComment(), $matches)) {
-                    list(, $type) = $matches;
-                    if (strstr($type, 'int') || strstr($type, 'string') || strstr($type, 'boolean') ){
-                        $propertyNames[] = $property->getName();
-                    }
+            if (preg_match('/@var\s+([^\s]+)/', $property->getDocComment(), $matches)) {
+                list(, $type) = $matches;
+                if (strstr($type, 'int') || strstr($type, 'string') || strstr($type, 'boolean') || strstr($type, '\DateTime') || strstr($type, 'float')){
+                    $propertyNames[] = $property->getName();
                 }
             }
         }
