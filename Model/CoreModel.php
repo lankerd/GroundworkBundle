@@ -179,7 +179,9 @@ abstract class CoreModel
                 }
             }
 
-            $sql = "REPLACE INTO `".$this->getOptions()[0]['currentService']."` (".$tableFields.") VALUES (".$doctrineFieldAliases.")";
+            $sql = "SET FOREIGN_KEY_CHECKS=0; -- to disable them";
+            $sql .= "REPLACE INTO `".$this->getOptions()[0]['currentService']."` (".$tableFields.") VALUES (".$doctrineFieldAliases.")";
+            $sql .= "SET FOREIGN_KEY_CHECKS=1; -- to re-enable them";
             $em = $this->entityManager->getEntityManager();
             $stmt = $em->getConnection()->prepare($sql);
             foreach ($doctrineAliasArguments as $argumentKey => $argument) {
@@ -192,6 +194,13 @@ abstract class CoreModel
                         }else{
                             $nullField = null;
                             $stmt->bindValue(':'.$argumentKey, $nullField, ParameterType::NULL);
+                        }
+                    }
+                    if (strstr($entityFieldTypes[$argumentKey], '\DateTime')){
+                        if (!empty($trimmedArgument)){
+                            $date = \DateTime::createFromFormat ('Y-m-d H:i:s.u', $trimmedArgument);
+                            $date = $date->format('Y-m-d H:i:s');
+                            $stmt->bindParam(':'.$argumentKey, $date, ParameterType::LARGE_OBJECT);
                         }
                     }
                     if (strstr($entityFieldTypes[$argumentKey], 'string')){
