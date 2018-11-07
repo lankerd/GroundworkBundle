@@ -179,9 +179,9 @@ abstract class CoreModel
                 }
             }
 
-            $sql = "SET FOREIGN_KEY_CHECKS=0; -- to disable them";
-            $sql .= "REPLACE INTO `".$this->getOptions()[0]['currentService']."` (".$tableFields.") VALUES (".$doctrineFieldAliases.")";
-            $sql .= "SET FOREIGN_KEY_CHECKS=1; -- to re-enable them";
+            //$sql = "SET FOREIGN_KEY_CHECKS=0; -- to disable them";
+            $sql = "REPLACE INTO `".$this->getOptions()[0]['currentService']."` (".$tableFields.") VALUES (".$doctrineFieldAliases.")";
+            //$sql .= "SET FOREIGN_KEY_CHECKS=1; -- to re-enable them";
             $em = $this->entityManager->getEntityManager();
             $stmt = $em->getConnection()->prepare($sql);
             foreach ($doctrineAliasArguments as $argumentKey => $argument) {
@@ -214,6 +214,15 @@ abstract class CoreModel
                             $trimmedArgument = mb_convert_encoding($trimmedArgument, 'UTF-8', 'pass');
                         }
                         $stmt->bindValue(':'.$argumentKey, $trimmedArgument);
+                    }
+                    if (strstr($entityFieldTypes[$argumentKey], 'float')){
+                        if (!empty($trimmedArgument)){
+                            $integerArgument = (float) $trimmedArgument;
+                            $stmt->bindParam(':'.$argumentKey, $integerArgument, ParameterType::INTEGER);
+                        }else{
+                            $nullField = null;
+                            $stmt->bindValue(':'.$argumentKey, $nullField, ParameterType::NULL);
+                        }
                     }
                 }
             }

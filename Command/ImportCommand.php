@@ -46,7 +46,6 @@ class ImportCommand extends ContainerAwareCommand
                 $trimmedFilesToImport[] = $fileToImport;
             }
         }
-
         $this->services = $fileNames;
 
         $this->processServices($services, $importPath, $trimmedFilesToImport);
