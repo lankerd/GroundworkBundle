@@ -2,12 +2,13 @@
 
 namespace Lankerd\GroundworkBundle\Command;
 
+use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 
-class ImportCommand extends ContainerAwareCommand
+class GroundworkImportCommand extends ContainerAwareCommand
 {
     protected $services;
 
@@ -28,6 +29,22 @@ class ImportCommand extends ContainerAwareCommand
      */
     public function execute(InputInterface $input, OutputInterface $output)
     {
+        /* We will initially run some removal scripts (if any are present)*/
+        $tablesToDelete = $this->getContainer()->getParameter('foreign_key_tables_to_delete');
+        if (!empty($tablesToDelete)){
+            $command = $this->getApplication()->find('groundwork:table:delete');
+
+            foreach ($tablesToDelete as $tableToDelete) {
+                $arguments = array(
+                    'command' => 'groundwork:table:delete',
+                    'tableName'    => $tableToDelete
+                );
+
+                $commandInput = new ArrayInput($arguments);
+                $command->run($commandInput, $output);
+            }
+        }
+        
         /*Grab the CSV Directory from the configuration file*/
         $importPath = $this->getContainer()->getParameter('import_directory');
         /*Cut out '..' and '.' when we scan the csv directory, effectively grabbing [all] file [name(s)] in the process*/
@@ -73,7 +90,6 @@ class ImportCommand extends ContainerAwareCommand
      */
     private function runServices($service, $importPath, $filesToImport)
     {
-
         if ($service == 'user') {
                 $this->getContainer()->get('user.model.layout')->makeUsers($filesToImport);
                 $this->getContainer()->get('user.model.layout')->setOptions([
@@ -88,6 +104,8 @@ class ImportCommand extends ContainerAwareCommand
                 try {
                     $this->getContainer()->get($filename);
                 } catch (\Exception $e) {
+                    dump($e);
+                    die;
                     unset($filesToImport[$key]);
                     continue;
                 }

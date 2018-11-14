@@ -129,12 +129,6 @@ abstract class CoreModel
     protected function processEntity(array $data)
     {
         $this->entityManager->getEntityManager()->getConfiguration()->setSQLLogger(null);
-        $sql = "SET FOREIGN_KEY_CHECKS=0; -- to re-enable them";
-        $sql .= "TRUNCATE `".$this->getOptions()[0]['currentService']."`;";
-        $sql .= "SET FOREIGN_KEY_CHECKS=1; -- to re-enable them";
-        $em = $this->entityManager->getEntityManager();
-        $stmt = $em->getConnection()->prepare($sql);
-        $stmt->execute();
         foreach ($data as $key => $datum) {
             /*Clears doctrine out every 25 queries*/
             if ($key % 25 == 0) {

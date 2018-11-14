@@ -10,8 +10,8 @@ use ReflectionClass;
 trait GroundworkEntityTrait
 {
     /**
-     * @deprecated Use "$classPlaceholder->getClassReflection()->getProperties()"
-     * Get Properties
+     * Get non-object Properties of a class
+     *
      * This'll be used in order to retrieve
      * a list of properties for all Entities.
      * I do this so that there is a way to
