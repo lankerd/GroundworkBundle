@@ -179,7 +179,6 @@ abstract class CoreModel
                 }
             }
 
-
             $sql = "REPLACE INTO `".$this->getOptions()[0]['currentService']."` (".$tableFields.") VALUES (".$doctrineFieldAliases.")";
             $em = $this->entityManager->getEntityManager();
             $stmt = $em->getConnection()->prepare($sql);
@@ -189,7 +188,7 @@ abstract class CoreModel
                     if (strstr($entityFieldTypes[$argumentKey], 'int')){
                         if (!empty($trimmedArgument)){
                             $integerArgument = (integer) $trimmedArgument;
-                            $stmt->bindParam(':'.$argumentKey, $integerArgument, ParameterType::INTEGER);
+                            $stmt->bindValue(':'.$argumentKey, $integerArgument, ParameterType::INTEGER);
                         }else{
                             $nullField = null;
                             $stmt->bindValue(':'.$argumentKey, $nullField, ParameterType::NULL);
@@ -199,7 +198,7 @@ abstract class CoreModel
                         if (!empty($trimmedArgument)){
                             $date = \DateTime::createFromFormat ('Y-m-d H:i:s.u', $trimmedArgument);
                             $date = $date->format('Y-m-d H:i:s');
-                            $stmt->bindParam(':'.$argumentKey, $date, ParameterType::LARGE_OBJECT);
+                            $stmt->bindValue(':'.$argumentKey, $date, ParameterType::LARGE_OBJECT);
                         }
                     }
                     if (strstr($entityFieldTypes[$argumentKey], 'string')){
@@ -216,8 +215,8 @@ abstract class CoreModel
                     }
                     if (strstr($entityFieldTypes[$argumentKey], 'float')){
                         if (!empty($trimmedArgument)){
-                            $integerArgument = (float) $trimmedArgument;
-                            $stmt->bindParam(':'.$argumentKey, $integerArgument, ParameterType::INTEGER);
+                            $floatingArgument = (float) $trimmedArgument;
+                            $stmt->bindValue(':'.$argumentKey, $floatingArgument, ParameterType::INTEGER);
                         }else{
                             $nullField = null;
                             $stmt->bindValue(':'.$argumentKey, $nullField, ParameterType::NULL);

@@ -3,9 +3,11 @@
 namespace Lankerd\GroundworkBundle\Command;
 
 use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputDefinition;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 
 class GroundworkImportCommand extends ContainerAwareCommand
@@ -15,36 +17,46 @@ class GroundworkImportCommand extends ContainerAwareCommand
     protected function configure()
     {
         $this
-            // the name of the command (the part after "bin/console")
             ->setName('groundwork:import:all')
-            // the short description shown while running "php bin/console list"
-            ->setDescription('Imports all records.');
+            ->setDescription('Imports all records.')
+            ->setDefinition(
+                new InputDefinition(array(
+                    new InputOption('empty_tables', 'c', InputOption::VALUE_OPTIONAL),
+                ))
+            );
+//            ->addArgument('empty_tables', InputArgument::OPTIONAL, 'Would you like to empty all listed tables in the config file?');
     }
 
     /**
-     * @param \Symfony\Component\Console\Input\InputInterface   $input
-     * @param \Symfony\Component\Console\Output\OutputInterface $output
+     * @param InputInterface  $input
+     * @param OutputInterface $output
      *
      * @return int|null|void
+     * @throws \Exception
      */
     public function execute(InputInterface $input, OutputInterface $output)
     {
+
+        $emptyTablesOption = $input->getOption('empty_tables');
         /* We will initially run some removal scripts (if any are present)*/
-        $tablesToDelete = $this->getContainer()->getParameter('foreign_key_tables_to_delete');
-        if (!empty($tablesToDelete)){
-            $command = $this->getApplication()->find('groundwork:table:delete');
 
-            foreach ($tablesToDelete as $tableToDelete) {
-                $arguments = array(
-                    'command' => 'groundwork:table:delete',
-                    'tableName'    => $tableToDelete
-                );
 
-                $commandInput = new ArrayInput($arguments);
-                $command->run($commandInput, $output);
+        if (strstr('yes', $emptyTablesOption)) {
+            $tablesToDelete = $this->getContainer()->getParameter('foreign_key_tables_to_delete');
+            if (!empty($tablesToDelete)) {
+                $command = $this->getApplication()->find('groundwork:table:delete');
+
+                foreach ($tablesToDelete as $tableToDelete) {
+                    $arguments = array(
+                        'command'   => 'groundwork:table:delete',
+                        'tableName' => $tableToDelete
+                    );
+
+                    $commandInput = new ArrayInput($arguments);
+                    $command->run($commandInput, $output);
+                }
             }
         }
-        
         /*Grab the CSV Directory from the configuration file*/
         $importPath = $this->getContainer()->getParameter('import_directory');
         /*Cut out '..' and '.' when we scan the csv directory, effectively grabbing [all] file [name(s)] in the process*/
@@ -90,41 +102,30 @@ class GroundworkImportCommand extends ContainerAwareCommand
      */
     private function runServices($service, $importPath, $filesToImport)
     {
-        if ($service == 'user') {
-                $this->getContainer()->get('user.model.layout')->makeUsers($filesToImport);
-                $this->getContainer()->get('user.model.layout')->setOptions([
-                    'filesToImport' => $filesToImport,
-                    'importPath' => $importPath,
-                    'serviceListing' => $this->services
-                ]);
-        } else {
-            foreach ($filesToImport as $key => $fileToImport) {
-                /*Strip the extension off of the filename in order to run the file in it's correct */
-                $filename = preg_replace('/\\.[^.\\s]{3,4}$/', '', $fileToImport);
-                try {
-                    $this->getContainer()->get($filename);
-                } catch (\Exception $e) {
-                    dump($e);
-                    die;
-                    unset($filesToImport[$key]);
-                    continue;
-                }
-                /*Let's remove the oncoming file*/
+        foreach ($filesToImport as $key => $fileToImport) {
+            /*Strip the extension off of the filename in order to run the file in it's correct */
+            $filename = preg_replace('/\\.[^.\\s]{3,4}$/', '', $fileToImport);
+            try {
+                $this->getContainer()->get($filename);
+            } catch (\Exception $e) {
                 unset($filesToImport[$key]);
-                if ($service == $filename) {
-                    echo "\n=============$filename=============\n";
-                    $this->getContainer()
-                        ->get($service)
-                        ->setOptions([
-                            'filesToImport' => $filesToImport,
-                            'importPath' => $importPath,
-                            'serviceListing' => $this->services,
-                            'currentService' => $service
-                        ]);
-                    $this->getContainer()
-                        ->get($service)
-                        ->readCSV($importPath.$fileToImport);
-                }
+                continue;
+            }
+            /*Let's remove the oncoming file*/
+            unset($filesToImport[$key]);
+            if ($service == $filename) {
+                echo "\n=============$filename=============\n";
+                $this->getContainer()
+                    ->get($service)
+                    ->setOptions([
+                        'filesToImport' => $filesToImport,
+                        'importPath' => $importPath,
+                        'serviceListing' => $this->services,
+                        'currentService' => $service
+                    ]);
+                $this->getContainer()
+                    ->get($service)
+                    ->readCSV($importPath.$fileToImport);
             }
         }
     }
