@@ -97,35 +97,46 @@ class GroundworkImportCommand extends ContainerAwareCommand
      * @param $service
      * @param $importPath
      * @param $filesToImport
-     *
-     * @throws \Exception
      */
     private function runServices($service, $importPath, $filesToImport)
     {
-        foreach ($filesToImport as $key => $fileToImport) {
-            /*Strip the extension off of the filename in order to run the file in it's correct */
-            $filename = preg_replace('/\\.[^.\\s]{3,4}$/', '', $fileToImport);
-            try {
-                $this->getContainer()->get($filename);
-            } catch (\Exception $e) {
+        if ($service == 'user') {
+            $this->getContainer()->get('user.model.layout')->makeUsers($filesToImport);
+            $this->getContainer()->get('user.model.layout')->setOptions(
+                [
+                    'filesToImport'  => $filesToImport,
+                    'importPath'     => $importPath,
+                    'serviceListing' => $this->services
+                ]
+            );
+        } else {
+            foreach ($filesToImport as $key => $fileToImport) {
+                /*Strip the extension off of the filename in order to run the file in it's correct */
+                $filename = preg_replace('/\\.[^.\\s]{3,4}$/', '', $fileToImport);
+                try {
+                    $this->getContainer()->get($filename);
+                } catch (\Exception $e) {
+                    unset($filesToImport[$key]);
+                    continue;
+                }
+                /*Let's remove the oncoming file*/
                 unset($filesToImport[$key]);
-                continue;
-            }
-            /*Let's remove the oncoming file*/
-            unset($filesToImport[$key]);
-            if ($service == $filename) {
-                echo "\n=============$filename=============\n";
-                $this->getContainer()
-                    ->get($service)
-                    ->setOptions([
-                        'filesToImport' => $filesToImport,
-                        'importPath' => $importPath,
-                        'serviceListing' => $this->services,
-                        'currentService' => $service
-                    ]);
-                $this->getContainer()
-                    ->get($service)
-                    ->readCSV($importPath.$fileToImport);
+                if ($service == $filename) {
+                    echo "\n=============$filename=============\n";
+                    $this->getContainer()
+                        ->get($service)
+                        ->setOptions(
+                            [
+                                'filesToImport'  => $filesToImport,
+                                'importPath'     => $importPath,
+                                'serviceListing' => $this->services,
+                                'currentService' => $service
+                            ]
+                        );
+                    $this->getContainer()
+                        ->get($service)
+                        ->readCSV($importPath.$fileToImport);
+                }
             }
         }
     }
