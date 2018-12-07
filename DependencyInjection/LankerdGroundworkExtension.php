@@ -31,7 +31,11 @@ class LankerdGroundworkExtension extends Extension
          *
          *
          */
-        $container->setParameter($this->getAlias().'.import_services', $configuration['import_services']);
+
+        try {
+            $container->setParameter($this->getAlias().'.import_services', $configuration['import_services']);
+        } catch (\Exception $e) {
+        }
 
         $loader = new Loader\YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
         $loader->load('services.yml');
