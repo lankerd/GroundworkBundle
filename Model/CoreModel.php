@@ -132,7 +132,8 @@ abstract class CoreModel
         foreach ($data as $key => $datum) {
             /*Clears doctrine out every 25 queries*/
             if ($key % 25 == 0) {
-                $this->entityManager->getEntityManager()->flush(); $this->entityManager->getEntityManager()->clear();
+                $this->entityManager->getEntityManager()->flush();
+                $this->entityManager->getEntityManager()->clear();
             }
 
             $entityClass = $this->create(); //Create the Entity
@@ -152,32 +153,23 @@ abstract class CoreModel
                     }
                 }
             }
-
+            /*This is going to map our tableFields and doctrineFieldAliases with the correctly associated datum*/
             foreach ($entityClass->getProperties() as $propertyKey => $property) {
                 $prettyProperty= strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $property));
-                if ($propertyKey == 0 || $propertyKey == 1) {
-                    if ($property == "id"){
-                        /*Skip the id property because the "id" should always be auto-incremented*/
-                    }else{
-                        if (isset($datum[ucfirst($property)])){
-                            $doctrineAliasArguments[$prettyProperty] = $datum[ucfirst($property)];
-                        }else{
-                            $doctrineAliasArguments[$prettyProperty] = null;
-                        }
-
-                        $tableFields .= '`'.$prettyProperty.'`';
-                        $doctrineFieldAliases .= ':'.$prettyProperty;
-                    }
-                }else{
                     if (isset($datum[ucfirst($property)])){
                         $doctrineAliasArguments[$prettyProperty] = $datum[ucfirst($property)];
                     }else{
-                        $doctrineAliasArguments[$prettyProperty] = null;
+                        if ($property == "id") {
+                            $doctrineAliasArguments[$prettyProperty] = null;
+                        }
                     }
                     $tableFields .= ', `'.$prettyProperty.'`';
                     $doctrineFieldAliases .= ', :'.$prettyProperty.'';
-                }
             }
+            
+            /*Trim off the first unnecessary comma*/
+            $doctrineFieldAliases = ltrim($doctrineFieldAliases, ', ');
+            $tableFields = ltrim($tableFields, ', ');
 
             $sql = "REPLACE INTO `".$this->getOptions()[0]['currentService']."` (".$tableFields.") VALUES (".$doctrineFieldAliases.")";
             $em = $this->entityManager->getEntityManager();
