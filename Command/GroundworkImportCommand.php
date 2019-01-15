@@ -64,14 +64,14 @@ class GroundworkImportCommand extends ContainerAwareCommand
         /*Grab all of the services that will be unpacked*/
         $services = $this->getContainer()->getParameter('lankerd_groundwork.import_services');
 
-        $trimmedFilesToImport =[];
+        $trimmedFilesToImport = [];
         $fileNames = [];
         /*We'll set a global that's watching our service listing[s]*/
         foreach ($filesToImport as $key => $fileToImport) {
             if (!empty(strpos($fileToImport, '.csv'))){
                 /*Strip the extension off of the filename*/
-                $fileNames[] = preg_replace('/\\.[^.\\s]{3,4}$/', '', $fileToImport);
-                $trimmedFilesToImport[] = $fileToImport;
+                $fileNames[] = preg_replace('/\\.[^.\\s]{3,4}$/', '', strtolower($fileToImport));
+                $trimmedFilesToImport[] = strtolower($fileToImport);
             }
         }
         $this->services = $fileNames;

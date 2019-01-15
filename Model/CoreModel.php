@@ -156,21 +156,20 @@ abstract class CoreModel
             /*This is going to map our tableFields and doctrineFieldAliases with the correctly associated datum*/
             foreach ($entityClass->getProperties() as $propertyKey => $property) {
                 $prettyProperty= strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $property));
-                    if (isset($datum[ucfirst($property)])){
-                        $doctrineAliasArguments[$prettyProperty] = $datum[ucfirst($property)];
-                    }else{
-                        if ($property == "id") {
-                            $doctrineAliasArguments[$prettyProperty] = null;
-                        }
+                $datum = array_combine(array_map('trim', array_keys($datum)), $datum);
+                if (isset($datum[ucfirst($property)])){
+                    $doctrineAliasArguments[$prettyProperty] = $datum[ucfirst($property)];
+                }else{
+                    if ($property == "id") {
+                        $doctrineAliasArguments[$prettyProperty] = null;
                     }
-                    $tableFields .= ', `'.$prettyProperty.'`';
-                    $doctrineFieldAliases .= ', :'.$prettyProperty.'';
+                }
+                $tableFields .= ', `'.$prettyProperty.'`';
+                $doctrineFieldAliases .= ', :'.$prettyProperty.'';
             }
-            
             /*Trim off the first unnecessary comma*/
             $doctrineFieldAliases = ltrim($doctrineFieldAliases, ', ');
             $tableFields = ltrim($tableFields, ', ');
-
             $sql = "REPLACE INTO `".$this->getOptions()[0]['currentService']."` (".$tableFields.") VALUES (".$doctrineFieldAliases.")";
             $em = $this->entityManager->getEntityManager();
             $stmt = $em->getConnection()->prepare($sql);
