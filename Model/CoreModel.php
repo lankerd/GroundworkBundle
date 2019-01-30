@@ -187,8 +187,14 @@ abstract class CoreModel
                     }
                     if (strstr($entityFieldTypes[$argumentKey], '\DateTime')){
                         if (!empty($trimmedArgument)){
-                            $date = \DateTime::createFromFormat ('Y-m-d H:i:s.u', $trimmedArgument);
-                            $date = $date->format('Y-m-d H:i:s');
+                            $date = \DateTime::createFromFormat ('Y-m-d H:i:s', $trimmedArgument);
+                            if ($date == false){
+                                $date = \DateTime::createFromFormat ('Y-m-d H:i:s.u', $trimmedArgument);
+                                $date = new \DateTime((float)$trimmedArgument);
+                                $date = $date->format('Y-m-d H:i:s.u');
+                            }else{
+                                $date = $date->format('Y-m-d H:i:s');
+                            }
                             $stmt->bindValue(':'.$argumentKey, $date, ParameterType::LARGE_OBJECT);
                         }
                     }
