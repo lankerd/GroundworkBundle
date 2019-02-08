@@ -11,7 +11,6 @@ trait GroundworkEntityTrait
 {
     /**
      * Get non-object Properties of a class
-     *
      * This'll be used in order to retrieve
      * a list of properties for all Entities.
      * I do this so that there is a way to
@@ -22,18 +21,25 @@ trait GroundworkEntityTrait
      * could benefit from a simple property
      * lister.
      *
+     * @param bool $isFormatted
+     *
      * @return array
      * @throws \ReflectionException
      */
-    public function getProperties()
+    public function getProperties($isFormatted = false)
     {
         $propertyNames = array();
         foreach ($this->getClassReflection()->getProperties() as $property) {
             $property->setAccessible(true);
             if (preg_match('/@var\s+([^\s]+)/', $property->getDocComment(), $matches)) {
                 list(, $type) = $matches;
-                if (strstr($type, 'int') || strstr($type, 'string') || strstr($type, 'boolean') || strstr($type, '\DateTime') || strstr($type, 'float')){
-                    $propertyNames[] = $property->getName();
+                /**/
+                if (!$isFormatted){
+                    if (strstr($type, 'int') || strstr($type, 'string') || strstr($type, 'boolean') || strstr($type, '\DateTime') || strstr($type, 'float')){
+                        $propertyNames[] = $property->getName();
+                    }
+                }else{
+                    $propertyNames[strtolower(preg_replace('/(?<!^)[A-Z0-9]/', '_$0', $property->getName()))] = $type;
                 }
             }
         }

@@ -16,14 +16,11 @@ class GroundworkImportCommand extends ContainerAwareCommand
 
     protected function configure()
     {
+
         $this
             ->setName('groundwork:import:all')
             ->setDescription('Imports all records.')
-            ->setDefinition(
-                new InputDefinition(array(
-                    new InputOption('empty_tables', 'c', InputOption::VALUE_OPTIONAL),
-                ))
-            );
+            ->addOption('drop_tables', 'd', InputOption::VALUE_OPTIONAL, "Drop all tables that have been provided underneath the 'foreign_key_tables_to_delete' configuration.", false);
     }
 
     /**
@@ -36,11 +33,9 @@ class GroundworkImportCommand extends ContainerAwareCommand
     public function execute(InputInterface $input, OutputInterface $output)
     {
 
-        $emptyTablesOption = $input->getOption('empty_tables');
+        $emptyTablesOption = $input->getOption('drop_tables');
         /* We will initially run some removal scripts (if any are present)*/
-
-
-        if (strstr('yes', $emptyTablesOption)) {
+        if (strstr('true', $emptyTablesOption)) {
             $tablesToDelete = $this->getContainer()->getParameter('foreign_key_tables_to_delete');
             if (!empty($tablesToDelete)) {
                 $command = $this->getApplication()->find('groundwork:table:delete');
