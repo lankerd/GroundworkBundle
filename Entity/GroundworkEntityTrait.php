@@ -26,7 +26,7 @@ trait GroundworkEntityTrait
      * @return array
      * @throws \ReflectionException
      */
-    public function getProperties($isFormatted = false)
+    public function getProperties($isFormatted = false, $allowObjects = false)
     {
         $propertyNames = array();
         foreach ($this->getClassReflection()->getProperties() as $property) {
@@ -34,12 +34,23 @@ trait GroundworkEntityTrait
             if (preg_match('/@var\s+([^\s]+)/', $property->getDocComment(), $matches)) {
                 list(, $type) = $matches;
                 /**/
-                if (!$isFormatted){
-                    if (strstr($type, 'int') || strstr($type, 'string') || strstr($type, 'boolean') || strstr($type, '\DateTime') || strstr($type, 'float')){
-                        $propertyNames[] = $property->getName();
+
+                if ($allowObjects){
+                    if (!$isFormatted){
+                        if (strstr($type, 'int') || strstr($type, 'string') || strstr($type, 'boolean') || strstr($type, '\DateTime') || strstr($type, 'float') || strstr($type, '\CrystalFlashBundle\Entity\StatementHeader')){
+                            $propertyNames[] = $property->getName();
+                        }
+                    }else{
+                        $propertyNames[strtolower(preg_replace('/(?<!^)[A-Z0-9]/', '_$0', $property->getName()))] = $type;
                     }
                 }else{
-                    $propertyNames[strtolower(preg_replace('/(?<!^)[A-Z0-9]/', '_$0', $property->getName()))] = $type;
+                    if (!$isFormatted){
+                        if (strstr($type, 'int') || strstr($type, 'string') || strstr($type, 'boolean') || strstr($type, '\DateTime') || strstr($type, 'float')){
+                            $propertyNames[] = $property->getName();
+                        }
+                    }else{
+                        $propertyNames[strtolower(preg_replace('/(?<!^)[A-Z0-9]/', '_$0', $property->getName()))] = $type;
+                    }
                 }
             }
         }
