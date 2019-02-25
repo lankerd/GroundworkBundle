@@ -33,8 +33,6 @@ trait GroundworkEntityTrait
             $property->setAccessible(true);
             if (preg_match('/@var\s+([^\s]+)/', $property->getDocComment(), $matches)) {
                 list(, $type) = $matches;
-                /**/
-
                 if ($allowObjects){
                     if (!$isFormatted){
                         if (strstr($type, 'int') || strstr($type, 'string') || strstr($type, 'boolean') || strstr($type, '\DateTime') || strstr($type, 'float') || strstr($type, '\CrystalFlashBundle\Entity\StatementHeader')){
@@ -57,6 +55,20 @@ trait GroundworkEntityTrait
         return $propertyNames;
     }
 
+    /*@TODO Need to build out a filter generator. We will take the types and build a form filter out of what we have been provided in the PHPdocs.*/
+    public function fullPropertyList()
+    {
+        $propertyNames = array();
+        foreach ($this->getClassReflection()->getProperties() as $property) {
+            $property->setAccessible(true);
+            if (preg_match('/@var\s+([^\s]+)/', $property->getDocComment(), $matches)) {
+                list(, $type) = $matches;
+                dump($matches[1], $property->getName());
+            }
+        }
+        die;
+        return $propertyNames;
+    }
 
     public function freePropertiesValues()
     {

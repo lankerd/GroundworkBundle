@@ -8,11 +8,19 @@ use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManager;
 use PDO;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Core\Authorization\AuthorizationChecker;
 use Symfony\Component\HttpFoundation\Session\Flash\FlashBag;
 use League\Csv\Exception;
 use League\Csv\Reader;
 use League\Csv\Statement;
+use Symfony\Component\Serializer\Encoder\CsvEncoder;
+use Symfony\Component\Serializer\Encoder\JsonEncoder;
+use Symfony\Component\Serializer\Encoder\XmlEncoder;
+use Symfony\Component\Serializer\Normalizer\GetSetMethodNormalizer;
+use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
+use Symfony\Component\Serializer\Serializer;
 
 /**
  * Class CoreModel
@@ -116,6 +124,55 @@ abstract class CoreModel
         $string = lcfirst($string);
 
         return $string;
+    }
+
+    private function isJSON($string){
+        return is_string($string) && is_array(json_decode($string, true)) ? true : false;
+    }
+
+    public function format( Request $request, $data, $format='csv', $unset=[], $outputToScreen=false )
+    {
+        $serializer = new Serializer([
+            new ObjectNormalizer(),
+            new GetSetMethodNormalizer()
+        ],[
+            'csv' => new CsvEncoder(),
+            'json' => new JsonEncoder(),
+            'xml' => new XmlEncoder()
+        ]);
+
+        foreach($data as $k=>$record){
+            foreach($record as $name=>$value){
+                if ($name == 'vendorResponse'){
+                    if ($this->isJSON($value)){
+                        foreach (json_decode($value) as $key => $item) {
+                            $data[$k][$key] = $item;
+                        }
+                    }
+                }
+                //remove unwanted fields
+                if(in_array($name, $unset)){
+                    unset($data[$k][$name]);
+                    continue;
+                }
+                //if object is encountered process or remove
+                if(is_object($value))
+                    switch (get_class($value)):
+                        case 'DateTime':
+                            $value = $value->format('Y-m-d H:i:s');
+                            break;
+                        default:
+                            unset($data[$k][$name]);
+                            continue;
+                    endswitch;
+                $data[$k][$name] = $value;
+            }
+        }
+        $output = $serializer->serialize( $data , $format );
+        $response = new Response($output);
+        if(!$outputToScreen)
+            $response->headers->set('Content-Type', 'text/'.$format);
+        return $response;
     }
 
     /**
