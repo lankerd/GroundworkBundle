@@ -2,11 +2,10 @@
 
 namespace Lankerd\GroundworkBundle\Model;
 
-use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManager;
-use PDO;
+use ReflectionClass;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -33,22 +32,17 @@ use Symfony\Component\Serializer\Serializer;
  * @package CoreBundle\Model
  * @author  Julian Lankerd <julianlankerd@gmail.com>
  */
-abstract class CoreModel
+abstract class CoreModel implements ConditionsInterface
 {
-    protected $class;
-    protected $orm;
-    protected $repo;
-    protected $user;
-    protected $roleCheck;
-    protected $flashBag;
-    protected $entityManager;
-    protected $coreData;
-    protected $dataCollection;
-    protected $options;
-    protected $containerAware;
-    protected $parentEntity;
-    protected $stack;
-    protected $migrationConditionArguments;
+    private $class;
+    private $orm;
+    private $repo;
+    private $roleCheck;
+    private $flashBag;
+    private $entityManager;
+    private $options;
+    private $containerAware;
+    private $migrationConditionArguments;
 
     /**
      * CoreModel constructor.
@@ -74,12 +68,51 @@ abstract class CoreModel
     }
 
     /**
-     * This will allow for us to bridge
-     * back over to the handler and take
-     * in any possible conditions the core
-     * migration should adhere to during migration!
+     * Used to retrieve all public methods
+     * available in the service handler being processed
+     *
+     * @return ReflectionClass
+     * @throws \ReflectionException
      */
-    abstract protected function migrationConditions();
+    public function getClassReflection($class)
+    {
+        return (new ReflectionClass($class));
+    }
+
+    /**
+     * This will allow for a bridge between an
+     * outside handler and the @CoreModel. This
+     * will allow for the CoreModel to take in
+     * any possible custom conditions that
+     * may be required during import.
+     *
+     * @return mixed
+     * @throws \ReflectionException
+     */
+    public function conditions()
+    {
+        /**
+         * Grab the current service handler and
+         * reflect it, and begin to run
+         */
+//        $currentService = $this->options['currentService'];
+//        $serviceClass = $this->containerAware->get($currentService);
+//        $reflection = $this->getClassReflection($serviceClass);
+//
+//
+//        foreach ($reflection->getMethods() as $method) {
+//            dump($method->name);
+//            die;
+//            foreach ($method->getDeclaringClass()->getMethods() as $method) {
+//                dump($method->name);
+//                die;
+//            }
+//        }
+//
+//        die;
+//        dump($serviceClass->class);
+//        die;
+    }
 
     /**
      * We'll check and see if the entity does exist
@@ -227,7 +260,7 @@ abstract class CoreModel
             /*Trim off the first unnecessary comma*/
             $doctrineFieldAliases = ltrim($doctrineFieldAliases, ', ');
             $tableFields = ltrim($tableFields, ', ');
-            $sql = "REPLACE INTO `".$this->getOptions()[0]['currentService']."` (".$tableFields.") VALUES (".$doctrineFieldAliases.")";
+            $sql = "REPLACE INTO `".$this->getOptions()['currentService']."` (".$tableFields.") VALUES (".$doctrineFieldAliases.")";
             $em = $this->entityManager->getEntityManager();
             $stmt = $em->getConnection()->prepare($sql);
             foreach ($doctrineAliasArguments as $argumentKey => $argument) {
@@ -334,7 +367,7 @@ abstract class CoreModel
      */
     public function setOptions($options)
     {
-        $this->options[] = $options;
+        $this->options = $options;
         return $this->options;
     }
 

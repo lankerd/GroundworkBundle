@@ -19,7 +19,7 @@ class GroundworkImportCommand extends ContainerAwareCommand
 
         $this
             ->setName('groundwork:import:all')
-            ->setDescription('Imports all records.')
+            ->setDescription('Imports all records. Purge records by appending \'-d true\'')
             ->addOption('drop_tables', 'd', InputOption::VALUE_OPTIONAL, "Drop all tables that have been provided underneath the 'foreign_key_tables_to_delete' configuration.", false);
     }
 
