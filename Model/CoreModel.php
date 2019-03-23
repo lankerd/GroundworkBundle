@@ -65,41 +65,6 @@ abstract class CoreModel implements ConditionsInterface
         return (new ReflectionClass($class));
     }
 
-//    /**
-//     * This will allow for a bridge between an
-//     * outside handler and the @CoreModel. This
-//     * will allow for the CoreModel to take in
-//     * any possible custom conditions that
-//     * may be required during import.
-//     *
-//     * @return mixed
-//     * @throws \ReflectionException
-//     */
-//    public function conditions()
-//    {
-//        /**
-//         * Grab the current service handler and
-//         * reflect it, and begin to run
-//         */
-////        $currentService = $this->options['currentService'];
-////        $serviceClass = $this->containerAware->get($currentService);
-////        $reflection = $this->getClassReflection($serviceClass);
-////
-////
-////        foreach ($reflection->getMethods() as $method) {
-////            dump($method->name);
-////            die;
-////            foreach ($method->getDeclaringClass()->getMethods() as $method) {
-////                dump($method->name);
-////                die;
-////            }
-////        }
-////
-////        die;
-////        dump($serviceClass->class);
-////        die;
-//    }
-
     /**
      * We'll check and see if the entity does exist
      * by simply checking to see if the provided entity
