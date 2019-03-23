@@ -6,11 +6,8 @@ use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManager;
 use ReflectionClass;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Security\Core\Authorization\AuthorizationChecker;
-use Symfony\Component\HttpFoundation\Session\Flash\FlashBag;
 use League\Csv\Exception;
 use League\Csv\Reader;
 use League\Csv\Statement;
@@ -35,13 +32,8 @@ use Symfony\Component\Serializer\Serializer;
 abstract class CoreModel implements ConditionsInterface
 {
     private $class;
-    private $orm;
-    private $repo;
-    private $roleCheck;
-    private $flashBag;
     private $entityManager;
     private $options;
-    private $containerAware;
     private $migrationConditionArguments;
 
     /**
@@ -49,27 +41,21 @@ abstract class CoreModel implements ConditionsInterface
      *
      * @param \Doctrine\Common\Persistence\ObjectManager                                 $orm
      * @param                                                                            $class *ExampleCompany\ExampleBundle\Entity\Example*
-     * @param \Symfony\Component\Security\Core\Authorization\AuthorizationChecker        $authorizationChecker
-     * @param \Symfony\Component\HttpFoundation\Session\Flash\FlashBag                   $flashBag
      * @param \Doctrine\ORM\EntityManager                                                $entityManager
-     * @param \Symfony\Component\DependencyInjection\ContainerInterface                  $containerAware
      */
 
-    public function __construct(ObjectManager $orm, $class, AuthorizationChecker $authorizationChecker, FlashBag $flashBag, EntityManager $entityManager, ContainerInterface $containerAware)
+    public function __construct(ObjectManager $orm, $class, EntityManager $entityManager)
     {
-        $this->containerAware = $containerAware;
         $this->entityManager = $entityManager->createQueryBuilder();
-        $this->orm   = $orm;
-        $this->repo  = $orm->getRepository($class);
         $metaData    = $orm->getClassMetadata($class);
         $this->class = $metaData->getName();
-        $this->roleCheck = $authorizationChecker;
-        $this->flashBag = $flashBag;
     }
 
     /**
      * Used to retrieve all public methods
      * available in the service handler being processed
+     *
+     * @param $class
      *
      * @return ReflectionClass
      * @throws \ReflectionException
@@ -79,40 +65,40 @@ abstract class CoreModel implements ConditionsInterface
         return (new ReflectionClass($class));
     }
 
-    /**
-     * This will allow for a bridge between an
-     * outside handler and the @CoreModel. This
-     * will allow for the CoreModel to take in
-     * any possible custom conditions that
-     * may be required during import.
-     *
-     * @return mixed
-     * @throws \ReflectionException
-     */
-    public function conditions()
-    {
-        /**
-         * Grab the current service handler and
-         * reflect it, and begin to run
-         */
-//        $currentService = $this->options['currentService'];
-//        $serviceClass = $this->containerAware->get($currentService);
-//        $reflection = $this->getClassReflection($serviceClass);
-//
-//
-//        foreach ($reflection->getMethods() as $method) {
-//            dump($method->name);
-//            die;
-//            foreach ($method->getDeclaringClass()->getMethods() as $method) {
-//                dump($method->name);
-//                die;
-//            }
-//        }
-//
-//        die;
-//        dump($serviceClass->class);
-//        die;
-    }
+//    /**
+//     * This will allow for a bridge between an
+//     * outside handler and the @CoreModel. This
+//     * will allow for the CoreModel to take in
+//     * any possible custom conditions that
+//     * may be required during import.
+//     *
+//     * @return mixed
+//     * @throws \ReflectionException
+//     */
+//    public function conditions()
+//    {
+//        /**
+//         * Grab the current service handler and
+//         * reflect it, and begin to run
+//         */
+////        $currentService = $this->options['currentService'];
+////        $serviceClass = $this->containerAware->get($currentService);
+////        $reflection = $this->getClassReflection($serviceClass);
+////
+////
+////        foreach ($reflection->getMethods() as $method) {
+////            dump($method->name);
+////            die;
+////            foreach ($method->getDeclaringClass()->getMethods() as $method) {
+////                dump($method->name);
+////                die;
+////            }
+////        }
+////
+////        die;
+////        dump($serviceClass->class);
+////        die;
+//    }
 
     /**
      * We'll check and see if the entity does exist
@@ -159,10 +145,24 @@ abstract class CoreModel implements ConditionsInterface
         return $string;
     }
 
+    /**
+     * @param $string
+     *
+     * @return bool
+     */
     private function isJSON($string){
         return is_string($string) && is_array(json_decode($string, true)) ? true : false;
     }
 
+    /**
+     * @param \Symfony\Component\HttpFoundation\Request $request
+     * @param                                           $data
+     * @param string                                    $format
+     * @param array                                     $unset
+     * @param bool                                      $outputToScreen
+     *
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
     public function format( Request $request, $data, $format='csv', $unset=[], $outputToScreen=false )
     {
         $serializer = new Serializer([
@@ -209,12 +209,13 @@ abstract class CoreModel implements ConditionsInterface
     }
 
     /**
-     * @param array  $data
+     * @param array $data
      *
      * @throws \Doctrine\Common\Persistence\Mapping\MappingException
      * @throws \Doctrine\DBAL\DBALException
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Exception
      */
     protected function processEntity(array $data)
     {
@@ -226,7 +227,8 @@ abstract class CoreModel implements ConditionsInterface
                 $this->entityManager->getEntityManager()->clear();
             }
 
-            $entityClass = $this->create(); //Create the Entity
+            /** @var object $entityClass */
+            $entityClass = new $this->class;
 
             $tableFields = '';
             $doctrineFieldAliases = '';
@@ -278,8 +280,8 @@ abstract class CoreModel implements ConditionsInterface
                     if (strstr($entityFieldTypes[$argumentKey], '\DateTime')){
                         if (!empty($trimmedArgument)){
                             $date = \DateTime::createFromFormat ('Y-m-d H:i:s', $trimmedArgument);
-                            if ($date == false){
-                                $date = \DateTime::createFromFormat ('Y-m-d H:i:s.u', $trimmedArgument);
+                            if (false == $date){
+                                /*$date = \DateTime::createFromFormat ('Y-m-d H:i:s.u', $trimmedArgument);*/
                                 $date = new \DateTime((float)$trimmedArgument);
                                 $date = $date->format('Y-m-d H:i:s.u');
                             }else{
@@ -290,7 +292,7 @@ abstract class CoreModel implements ConditionsInterface
                     }
                     if (strstr($entityFieldTypes[$argumentKey], 'string')){
                         /*Check for weird encoding issues they might arise*/
-                        if(mb_detect_encoding($trimmedArgument, 'UTF-8', true) == false){
+                        if(false == mb_detect_encoding($trimmedArgument, 'UTF-8', true)){
                             /**
                              * Mies well just clear the issues. PHP can barely
                              * handle the kind of encoding issues
@@ -343,21 +345,6 @@ abstract class CoreModel implements ConditionsInterface
         }
         /*Now that the data has been broken up into coherent sets, let's begin to import the records */
         $this->processEntity($records, $parentEntity);
-    }
-
-    /**
-     * Used to quickly create a new class,
-     * complete fluff function, does not serve
-     * a critical role and will probably be removed
-     * if found to be too circumstantial.
-     *
-     * TODO: Remove this function if it begins to seem like unnecessary bloat.
-     *
-     * @return mixed
-     */
-    public function create () {
-        $class = $this->class;
-        return new $class;
     }
 
     /**
