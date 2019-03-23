@@ -13,8 +13,14 @@
     ],
 	"require": {
 		"php": ">=7.0",
-		"twig/twig": "^2.0"
+		"twig/twig": "^2.0",
+        "doctrine/doctrine-bundle": ">=1.10",
+        "league/csv": "^9.2",
+        "symfony/serializer": "*",
+		"doctrine/orm": "^2.6.2",
+		"symfony/orm-pack": "*"
 	},
+
     "autoload": {
         "psr-4": {
             "Lankerd\\GroundworkBundle\\": ""
