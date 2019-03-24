@@ -4,7 +4,7 @@ services:
 #        tags:
 #            - { name: doctrine.event_subscriber, connection: default }
 
-    usort.twig.custom_extension:
+    lankerd.groundwork.twig.custom_extension:
         class: Lankerd\GroundworkBundle\Twig\GroundworkTwig
         tags:
             - { name: twig.extension }

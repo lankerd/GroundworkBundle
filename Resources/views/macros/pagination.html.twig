@@ -1,3 +1,52 @@
+{% macro linkcsv(  route, filters  ) %}
+    {% spaceless %}
+        <a class="btn btn-primary-outline" data-toggle="tooltip" data-placement="top"
+           title="Filters apply apart from 'Show X entries' - all records are returned."
+           href="{{ path( route, { 'format': 'csv' } ) }}">
+            <span class="fa fa-download"></span> CSV File
+        </a>
+        {# path( route, filters|merge( { 'format': 'csv' } ) ) #}
+        <script>
+            $(document).ready( function(){
+                $('[data-toggle="tooltip"]').tooltip()
+            } );
+        </script>
+    {% endspaceless %}
+{% endmacro %}
+
+{# cp_adam: pagination.sortcolumns macro #}
+{% macro sortcolumns( options ) %}
+    {% spaceless %}
+        {% set filters = options.filters %}
+        {% set direc = app.request.query.get("direc") %}
+        {% if (direc is empty) %}
+            {% set direc = options.defdirec %}
+        {% elseif (direc == 'asc') %}
+            {% set direc = 'desc' %}
+        {% elseif (direc == 'desc') %}
+            {% set direc = 'asc' %}
+        {% endif %}
+        {% for field,label in options.fields %}
+            {% if (direc == 'asc') %}
+                {% set arrow = 'down' %}
+            {% elseif (direc == 'desc') %}
+                {% set arrow = 'up' %}
+            {% endif %}
+            {% if (app.request.query.get("sortby") != field ) %}
+                {% set arrow = '' %}
+            {% endif %}
+            <th>
+                {% if ('.' in field) %}
+                    {{ label }}
+                {% else %}
+                    <a href="{{ path( options.route, filters|merge( { 'sortby': field, 'direc': direc, 'page': options.currentPage } ) ) }}">{{ label }}</a>
+                    <i class="fa fa-fw fa-arrow-{{ arrow }}"></i>
+                {% endif %}
+            </th>
+        {% endfor %}
+    {% endspaceless %}
+{% endmacro %}
+
 {% macro build( route, currentPage, maxPages, filters ) %}
     {% if maxPages == 0 %}
         {% set maxPages = 1 %}
@@ -43,3 +92,4 @@
         </ul>
     {% endspaceless %}
 {% endmacro %}
+

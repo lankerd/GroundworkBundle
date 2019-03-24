@@ -12,22 +12,16 @@
         }
     ],
 	"require": {
-		"php": ">=7.0",
-		"symfony/form":	"^3.0",
-		"symfony/framework-bundle": "^3.0",
-		"symfony/security-bundle": "^3.0",
-		"symfony/twig-bundle": "^3.0",
+		"php": "^7.2",
 		"twig/twig": "^2.0",
-		"symfony/templating": "^3.0",
-		"friendsofsymfony/user-bundle": "~2.0",
-		"symfony/swiftmailer-bundle": "^2.6.4"
+        "doctrine/doctrine-bundle": "^1.10",
+        "league/csv": "^9.2",
+        "symfony/serializer": "^2.3",
+		"doctrine/orm": "^2.6.2",
+		"symfony/orm-pack": "^1.0.6",
+		"ext-json": "*"
 	},
-	
-	"require-dev": {
-		"doctrine/doctrine-bundle": "^1.5",
-		"symfony/validator": "^3.0"
-	},
-	
+
     "autoload": {
         "psr-4": {
             "Lankerd\\GroundworkBundle\\": ""

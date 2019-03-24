@@ -6,3 +6,4 @@
 # Composer PHAR
 /composer.phar
 .idea
+/composer.lock

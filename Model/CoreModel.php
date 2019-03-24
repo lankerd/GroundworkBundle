@@ -2,17 +2,21 @@
 
 namespace Lankerd\GroundworkBundle\Model;
 
-use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManager;
-use PDO;
-use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\Security\Core\Authorization\AuthorizationChecker;
-use Symfony\Component\HttpFoundation\Session\Flash\FlashBag;
+use ReflectionClass;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use League\Csv\Exception;
 use League\Csv\Reader;
 use League\Csv\Statement;
+use Symfony\Component\Serializer\Encoder\CsvEncoder;
+use Symfony\Component\Serializer\Encoder\JsonEncoder;
+use Symfony\Component\Serializer\Encoder\XmlEncoder;
+use Symfony\Component\Serializer\Normalizer\GetSetMethodNormalizer;
+use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
+use Symfony\Component\Serializer\Serializer;
 
 /**
  * Class CoreModel
@@ -25,53 +29,41 @@ use League\Csv\Statement;
  * @package CoreBundle\Model
  * @author  Julian Lankerd <julianlankerd@gmail.com>
  */
-abstract class CoreModel
+abstract class CoreModel implements ConditionsInterface
 {
-    protected $class;
-    protected $orm;
-    protected $repo;
-    protected $user;
-    protected $roleCheck;
-    protected $flashBag;
-    protected $entityManager;
-    protected $coreData;
-    protected $dataCollection;
-    protected $options;
-    protected $containerAware;
-    protected $parentEntity;
-    protected $stack;
-    protected $migrationConditionArguments;
+    private $class;
+    private $entityManager;
+    private $options;
+    private $migrationConditionArguments;
 
     /**
      * CoreModel constructor.
      *
      * @param \Doctrine\Common\Persistence\ObjectManager                                 $orm
      * @param                                                                            $class *ExampleCompany\ExampleBundle\Entity\Example*
-     * @param \Symfony\Component\Security\Core\Authorization\AuthorizationChecker        $authorizationChecker
-     * @param \Symfony\Component\HttpFoundation\Session\Flash\FlashBag                   $flashBag
      * @param \Doctrine\ORM\EntityManager                                                $entityManager
-     * @param \Symfony\Component\DependencyInjection\ContainerInterface                  $containerAware
      */
 
-    public function __construct(ObjectManager $orm, $class, AuthorizationChecker $authorizationChecker, FlashBag $flashBag, EntityManager $entityManager, ContainerInterface $containerAware)
+    public function __construct(ObjectManager $orm, $class, EntityManager $entityManager)
     {
-        $this->containerAware = $containerAware;
         $this->entityManager = $entityManager->createQueryBuilder();
-        $this->orm   = $orm;
-        $this->repo  = $orm->getRepository($class);
         $metaData    = $orm->getClassMetadata($class);
         $this->class = $metaData->getName();
-        $this->roleCheck = $authorizationChecker;
-        $this->flashBag = $flashBag;
     }
 
     /**
-     * This will allow for us to bridge
-     * back over to the handler and take
-     * in any possible conditions the core
-     * migration should adhere to during migration!
+     * Used to retrieve all public methods
+     * available in the service handler being processed
+     *
+     * @param $class
+     *
+     * @return ReflectionClass
+     * @throws \ReflectionException
      */
-    abstract protected function migrationConditions();
+    public function getClassReflection($class)
+    {
+        return (new ReflectionClass($class));
+    }
 
     /**
      * We'll check and see if the entity does exist
@@ -119,12 +111,76 @@ abstract class CoreModel
     }
 
     /**
-     * @param array  $data
+     * @param $string
+     *
+     * @return bool
+     */
+    private function isJSON($string){
+        return is_string($string) && is_array(json_decode($string, true)) ? true : false;
+    }
+
+    /**
+     * @param \Symfony\Component\HttpFoundation\Request $request
+     * @param                                           $data
+     * @param string                                    $format
+     * @param array                                     $unset
+     * @param bool                                      $outputToScreen
+     *
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    public function format( Request $request, $data, $format='csv', $unset=[], $outputToScreen=false )
+    {
+        $serializer = new Serializer([
+            new ObjectNormalizer(),
+            new GetSetMethodNormalizer()
+        ],[
+            'csv' => new CsvEncoder(),
+            'json' => new JsonEncoder(),
+            'xml' => new XmlEncoder()
+        ]);
+
+        foreach($data as $k=>$record){
+            foreach($record as $name=>$value){
+                if ($name == 'vendorResponse'){
+                    if ($this->isJSON($value)){
+                        foreach (json_decode($value) as $key => $item) {
+                            $data[$k][$key] = $item;
+                        }
+                    }
+                }
+                //remove unwanted fields
+                if(in_array($name, $unset)){
+                    unset($data[$k][$name]);
+                    continue;
+                }
+                //if object is encountered process or remove
+                if(is_object($value))
+                    switch (get_class($value)):
+                        case 'DateTime':
+                            $value = $value->format('Y-m-d H:i:s');
+                            break;
+                        default:
+                            unset($data[$k][$name]);
+                            continue;
+                    endswitch;
+                $data[$k][$name] = $value;
+            }
+        }
+        $output = $serializer->serialize( $data , $format );
+        $response = new Response($output);
+        if(!$outputToScreen)
+            $response->headers->set('Content-Type', 'text/'.$format);
+        return $response;
+    }
+
+    /**
+     * @param array $data
      *
      * @throws \Doctrine\Common\Persistence\Mapping\MappingException
      * @throws \Doctrine\DBAL\DBALException
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Exception
      */
     protected function processEntity(array $data)
     {
@@ -132,10 +188,12 @@ abstract class CoreModel
         foreach ($data as $key => $datum) {
             /*Clears doctrine out every 25 queries*/
             if ($key % 25 == 0) {
-                $this->entityManager->getEntityManager()->flush(); $this->entityManager->getEntityManager()->clear();
+                $this->entityManager->getEntityManager()->flush();
+                $this->entityManager->getEntityManager()->clear();
             }
 
-            $entityClass = $this->create(); //Create the Entity
+            /** @var object $entityClass */
+            $entityClass = new $this->class;
 
             $tableFields = '';
             $doctrineFieldAliases = '';
@@ -152,36 +210,24 @@ abstract class CoreModel
                     }
                 }
             }
-
+            /*This is going to map our tableFields and doctrineFieldAliases with the correctly associated datum*/
             foreach ($entityClass->getProperties() as $propertyKey => $property) {
                 $prettyProperty= strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $property));
-                if ($propertyKey == 0 || $propertyKey == 1) {
-                    if ($property == "id"){
-                        /*Skip the id property because the "id" should always be auto-incremented*/
-                    }else{
-                        if (isset($datum[ucfirst($property)])){
-                            $doctrineAliasArguments[$prettyProperty] = $datum[ucfirst($property)];
-                        }else{
-                            $doctrineAliasArguments[$prettyProperty] = null;
-                        }
-
-                        $tableFields .= '`'.$prettyProperty.'`';
-                        $doctrineFieldAliases .= ':'.$prettyProperty;
-                    }
+                $datum = array_combine(array_map('trim', array_keys($datum)), $datum);
+                if (isset($datum[ucfirst($property)])){
+                    $doctrineAliasArguments[$prettyProperty] = $datum[ucfirst($property)];
                 }else{
-                    if (isset($datum[ucfirst($property)])){
-                        $doctrineAliasArguments[$prettyProperty] = $datum[ucfirst($property)];
-                    }else{
+                    if ($property == "id") {
                         $doctrineAliasArguments[$prettyProperty] = null;
                     }
-                    $tableFields .= ', `'.$prettyProperty.'`';
-                    $doctrineFieldAliases .= ', :'.$prettyProperty.'';
                 }
+                $tableFields .= ', `'.$prettyProperty.'`';
+                $doctrineFieldAliases .= ', :'.$prettyProperty.'';
             }
-
-            $sql = "SET FOREIGN_KEY_CHECKS=0; -- to disable them";
-            $sql .= "REPLACE INTO `".$this->getOptions()[0]['currentService']."` (".$tableFields.") VALUES (".$doctrineFieldAliases.")";
-            $sql .= "SET FOREIGN_KEY_CHECKS=1; -- to re-enable them";
+            /*Trim off the first unnecessary comma*/
+            $doctrineFieldAliases = ltrim($doctrineFieldAliases, ', ');
+            $tableFields = ltrim($tableFields, ', ');
+            $sql = "REPLACE INTO `".$this->getOptions()['currentService']."` (".$tableFields.") VALUES (".$doctrineFieldAliases.")";
             $em = $this->entityManager->getEntityManager();
             $stmt = $em->getConnection()->prepare($sql);
             foreach ($doctrineAliasArguments as $argumentKey => $argument) {
@@ -190,7 +236,7 @@ abstract class CoreModel
                     if (strstr($entityFieldTypes[$argumentKey], 'int')){
                         if (!empty($trimmedArgument)){
                             $integerArgument = (integer) $trimmedArgument;
-                            $stmt->bindParam(':'.$argumentKey, $integerArgument, ParameterType::INTEGER);
+                            $stmt->bindValue(':'.$argumentKey, $integerArgument, ParameterType::INTEGER);
                         }else{
                             $nullField = null;
                             $stmt->bindValue(':'.$argumentKey, $nullField, ParameterType::NULL);
@@ -198,14 +244,19 @@ abstract class CoreModel
                     }
                     if (strstr($entityFieldTypes[$argumentKey], '\DateTime')){
                         if (!empty($trimmedArgument)){
-                            $date = \DateTime::createFromFormat ('Y-m-d H:i:s.u', $trimmedArgument);
-                            $date = $date->format('Y-m-d H:i:s');
-                            $stmt->bindParam(':'.$argumentKey, $date, ParameterType::LARGE_OBJECT);
+                            $date = \DateTime::createFromFormat ('Y-m-d H:i:s', $trimmedArgument);
+                            if ($date === false){
+                                $date = new \DateTime((float)$trimmedArgument);
+                                $date = $date->format('Y-m-d H:i:s.u');
+                            }else{
+                                $date = $date->format('Y-m-d H:i:s');
+                            }
+                            $stmt->bindValue(':'.$argumentKey, $date, ParameterType::LARGE_OBJECT);
                         }
                     }
                     if (strstr($entityFieldTypes[$argumentKey], 'string')){
                         /*Check for weird encoding issues they might arise*/
-                        if(mb_detect_encoding($trimmedArgument, 'UTF-8', true) == false){
+                        if(mb_detect_encoding($trimmedArgument, 'UTF-8', true) === false){
                             /**
                              * Mies well just clear the issues. PHP can barely
                              * handle the kind of encoding issues
@@ -214,6 +265,15 @@ abstract class CoreModel
                             $trimmedArgument = mb_convert_encoding($trimmedArgument, 'UTF-8', 'pass');
                         }
                         $stmt->bindValue(':'.$argumentKey, $trimmedArgument);
+                    }
+                    if (strstr($entityFieldTypes[$argumentKey], 'float')){
+                        if (!empty($trimmedArgument)){
+                            $floatingArgument = (float) $trimmedArgument;
+                            $stmt->bindValue(':'.$argumentKey, $floatingArgument, ParameterType::INTEGER);
+                        }else{
+                            $nullField = null;
+                            $stmt->bindValue(':'.$argumentKey, $nullField, ParameterType::NULL);
+                        }
                     }
                 }
             }
@@ -230,16 +290,12 @@ abstract class CoreModel
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      */
-    public function readCSV($fullPath, $parentEntity = null)
+    public function readCSV($fullPath)
     {
         $csv = Reader::createFromPath($fullPath);
         $records = array();
 
-        try {
-            $csv->setHeaderOffset(0);
-        } catch (Exception $e) {
-            throw new $e;
-        }
+        $csv->setHeaderOffset(0);
 
         $stmt = (new Statement());
         $rows = $stmt->process($csv);
@@ -248,22 +304,7 @@ abstract class CoreModel
             $records[] = $row;
         }
         /*Now that the data has been broken up into coherent sets, let's begin to import the records */
-        $this->processEntity($records, $parentEntity);
-    }
-
-    /**
-     * Used to quickly create a new class,
-     * complete fluff function, does not serve
-     * a critical role and will probably be removed
-     * if found to be too circumstantial.
-     *
-     * TODO: Remove this function if it begins to seem like unnecessary bloat.
-     *
-     * @return mixed
-     */
-    public function create () {
-        $class = $this->class;
-        return new $class;
+        $this->processEntity($records);
     }
 
     /**
@@ -273,7 +314,7 @@ abstract class CoreModel
      */
     public function setOptions($options)
     {
-        $this->options[] = $options;
+        $this->options = $options;
         return $this->options;
     }
 
