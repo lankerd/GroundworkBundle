@@ -245,8 +245,7 @@ abstract class CoreModel implements ConditionsInterface
                     if (strstr($entityFieldTypes[$argumentKey], '\DateTime')){
                         if (!empty($trimmedArgument)){
                             $date = \DateTime::createFromFormat ('Y-m-d H:i:s', $trimmedArgument);
-                            if (false == $date){
-                                /*$date = \DateTime::createFromFormat ('Y-m-d H:i:s.u', $trimmedArgument);*/
+                            if ($date === false){
                                 $date = new \DateTime((float)$trimmedArgument);
                                 $date = $date->format('Y-m-d H:i:s.u');
                             }else{
@@ -257,7 +256,7 @@ abstract class CoreModel implements ConditionsInterface
                     }
                     if (strstr($entityFieldTypes[$argumentKey], 'string')){
                         /*Check for weird encoding issues they might arise*/
-                        if(false == mb_detect_encoding($trimmedArgument, 'UTF-8', true)){
+                        if(mb_detect_encoding($trimmedArgument, 'UTF-8', true) === false){
                             /**
                              * Mies well just clear the issues. PHP can barely
                              * handle the kind of encoding issues
@@ -291,16 +290,12 @@ abstract class CoreModel implements ConditionsInterface
      * @throws \Doctrine\ORM\ORMException
      * @throws \Doctrine\ORM\OptimisticLockException
      */
-    public function readCSV($fullPath, $parentEntity = null)
+    public function readCSV($fullPath)
     {
         $csv = Reader::createFromPath($fullPath);
         $records = array();
 
-        try {
-            $csv->setHeaderOffset(0);
-        } catch (Exception $e) {
-            throw new $e;
-        }
+        $csv->setHeaderOffset(0);
 
         $stmt = (new Statement());
         $rows = $stmt->process($csv);
@@ -309,7 +304,7 @@ abstract class CoreModel implements ConditionsInterface
             $records[] = $row;
         }
         /*Now that the data has been broken up into coherent sets, let's begin to import the records */
-        $this->processEntity($records, $parentEntity);
+        $this->processEntity($records);
     }
 
     /**

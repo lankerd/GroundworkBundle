@@ -2,6 +2,9 @@
 
 namespace Lankerd\GroundworkBundle\Twig;
 
+use Twig\TwigFilter;
+use Twig\TwigFunction;
+
 class GroundworkTwig extends \Twig_Extension
 {
     /**
@@ -10,8 +13,8 @@ class GroundworkTwig extends \Twig_Extension
     public function getFilters()
 	{
 		return array(
-		    new \Twig_Filter('usort', array($this, 'usortFilter')),
-            new \Twig_Filter('instanceOf', array($this, 'isInstanceOf')),
+		    new TwigFilter('usort', array($this, 'usortFilter')),
+            new TwigFilter('instanceOf', array($this, 'isInstanceOf')),
 		);
 	}
 
@@ -21,7 +24,7 @@ class GroundworkTwig extends \Twig_Extension
     public function getFunctions()
     {
         return array(
-            new \Twig_Function('die', array($this, 'die')),
+            new TwigFunction('die', array($this, 'die')),
         );
     }
 
@@ -50,7 +53,7 @@ class GroundworkTwig extends \Twig_Extension
      * </pre>
      */
     public function usortFilter($item, $objectFunction){
-		usort($item, function ($item1, $item2) use ($objectFunction) {
+		usort($item, function ( object $item1, object $item2) use ($objectFunction) {
 			if ($item1->$objectFunction() == $item2->$objectFunction()) return 0;
 			return $item1->$objectFunction() < $item2->$objectFunction() ? -1 : 1;
 		});
@@ -66,10 +69,5 @@ class GroundworkTwig extends \Twig_Extension
      */
     public function isInstanceOf($var, $instance){
         return $var instanceof $instance;
-    }
-
-	public function die()
-    {
-        die();
     }
 }
