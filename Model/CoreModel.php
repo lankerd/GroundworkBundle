@@ -8,7 +8,6 @@ use Doctrine\ORM\EntityManager;
 use ReflectionClass;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use League\Csv\Exception;
 use League\Csv\Reader;
 use League\Csv\Statement;
 use Symfony\Component\Serializer\Encoder\CsvEncoder;
