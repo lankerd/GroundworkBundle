@@ -37,5 +37,4 @@ class GroundworkTableDeleteCommand extends ContainerAwareCommand
 
         $output->writeln('Purged '.$tableName);
     }
-
 }

@@ -22,14 +22,11 @@ class LankerdGroundworkExtension extends Extension
         $configuration = new Configuration();
         $configuration = $this->processConfiguration($configuration, $configs);
 
-        
+
         /**
          * lankerd_groundwork.import_services
-         *
          * We will set a parameter that'll hold a list
          * of the import service(s) the user provided
-         *
-         *
          */
 
         try {

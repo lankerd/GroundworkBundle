@@ -139,3 +139,4 @@ trait GroundworkEntityTrait
         return (new ReflectionClass($this));
     }
 }
+

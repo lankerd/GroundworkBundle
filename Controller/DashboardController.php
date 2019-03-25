@@ -16,5 +16,4 @@ class DashboardController extends Controller
     {
         return $this->render('@LankerdGroundwork/MenuItems/groundwork-menu.html.twig');
     }
-
 }

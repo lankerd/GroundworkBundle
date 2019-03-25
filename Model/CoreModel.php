@@ -340,5 +340,4 @@ abstract class CoreModel implements ConditionsInterface
     {
         $this->migrationConditionArguments[] = $migrationConditionArguments;
     }
-
 }
