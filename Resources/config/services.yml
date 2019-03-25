@@ -12,3 +12,4 @@ services:
     groundwork_mailer:
         class: Lankerd\GroundworkBundle\Services\Mailer
         arguments: ["@mailer"]
+        
