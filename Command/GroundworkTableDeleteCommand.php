@@ -31,8 +31,6 @@ class GroundworkTableDeleteCommand extends ContainerAwareCommand
             $connection->query('SET FOREIGN_KEY_CHECKS=1');
         } catch (\Exception $e) {
             $connection->rollback();
-            dump($connection->rollback());
-            die;
         }
 
         $output->writeln('Purged '.$tableName);
