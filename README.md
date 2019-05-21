@@ -3,7 +3,7 @@ Installation of the Groundwork Bundle requires that you edit the composer.json f
 
 Add new repository to your composer.json:
 
-`
+```
 "repositories": [{
     "type": "vcs",
     "url": "https://github.com/lankerd/GroundworkBundle",
@@ -14,7 +14,8 @@ Add new repository to your composer.json:
             ]
         }
     }
-}],`
+}],
+```
 
 Add to the "required" array:
 `"lankerd/groundwork-bundle": "^1.*",`  
@@ -36,14 +37,31 @@ The groundwork bundle consist of the following advancements / enhancements to yo
 
 ##### Powerful CSV Import Process
 Make sure to add the code below:
-
+```
     lankerd_groundwork:
         import_services:
         -   'user':
             -   'billing_address':
                 -   'shipping_address':
                     -    'tank': ['tank_type']
+ ```
 
 ##### Useful Twig Functions
 
 ##### Other useful functionality
+To utilize many of the functionalities that the ground work bundle provides you need to do the following inside of your Entity file:
+
+`use GroundworkEntityTrait;`
+
+Example of how this would look in your file:
+
+```
+class Feed
+{
+    use GroundworkEntityTrait;
+```
+You will then be given access to the following methods:
+
+``methodName($var, $var1)``
+
+
