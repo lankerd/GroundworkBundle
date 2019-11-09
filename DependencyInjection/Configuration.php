@@ -15,12 +15,11 @@ class Configuration implements ConfigurationInterface
     /**
      * {@inheritdoc}
      */
-    public function getConfigTreeBuilder()
+    public function getConfigTreeBuilder(): TreeBuilder
     {
-        $treeBuilder = new TreeBuilder();
-        $rootNode = $treeBuilder->root('lankerd_groundwork');
+        $treeBuilder = new TreeBuilder('lankerd_groundwork');
 
-        $rootNode
+        $treeBuilder->getRootNode()
             ->fixXmlConfig('import_service')
             ->children()
                 ->variableNode('import_services')->end()

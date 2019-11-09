@@ -16,6 +16,7 @@ class LankerdGroundworkExtension extends Extension
 {
     /**
      * {@inheritdoc}
+     * @throws \Exception
      */
     public function load(array $configs, ContainerBuilder $container)
     {
@@ -32,6 +33,7 @@ class LankerdGroundworkExtension extends Extension
         try {
             $container->setParameter($this->getAlias().'.import_services', $configuration['import_services']);
         } catch (\Exception $e) {
+            throw $e;
         }
 
         $loader = new Loader\YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
