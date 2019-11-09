@@ -24,7 +24,6 @@
 		"twig/twig": "^2.0",
         "doctrine/doctrine-bundle": "^1.10",
         "league/csv": "^9.2",
-        "symfony/serializer": "^2.3",
 		"doctrine/orm": "^2.6.2",
 		"symfony/orm-pack": "^1.0.6",
 		"ext-json": "*"
