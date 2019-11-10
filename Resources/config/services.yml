@@ -1,9 +1,4 @@
 services:
-#    core.subscriber:
-#        class: Lankerd\GroundworkBundle\EventListener\CoreSubscriber
-#        tags:
-#            - { name: doctrine.event_subscriber, connection: default }
-
     lankerd_groundwork.twig.custom_extension:
         class: Lankerd\GroundworkBundle\Twig\GroundworkTwig
         tags:
@@ -13,5 +8,7 @@ services:
         class: Lankerd\GroundworkBundle\Services\Mailer
         arguments: ["@mailer"]
 
-    lankerd_groundwork.object_handler:
-        class: Lankerd\GroundworkBundle\Util\ObjectHandler
+    Lankerd\GroundworkBundle\Util\ObjectHandler: ~
+
+    Lankerd\GroundworkBundle\Handler\DataHandler:
+        arguments: ['@Lankerd\GroundworkBundle\Util\ObjectHandler', '@doctrine.orm.default_entity_manager', '@form.factory', '@serializer']

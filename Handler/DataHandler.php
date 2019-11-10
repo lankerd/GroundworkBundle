@@ -1,7 +1,8 @@
 <?php
 
-namespace Lankerd\GroundworkBundle\Controller;
+namespace Lankerd\GroundworkBundle\Handler;
 
+use Doctrine\ORM\EntityManager;
 use DomainException;
 use Exception;
 use Lankerd\GroundworkBundle\Util\ObjectHandler;
@@ -9,8 +10,9 @@ use LogicException;
 use ReflectionClass;
 use ReflectionException;
 use RuntimeException;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\{Request, Response};
+use Symfony\Component\Form\FormFactory;
+use Symfony\Component\Serializer\Serializer;
 
 
 /**
@@ -19,16 +21,22 @@ use Symfony\Component\HttpFoundation\{Request, Response};
  * @package Lankerd\GroundworkBundle\Controller
  * @author  Julian Lankerd <julianlankerd@gmail.com>
  */
-abstract class BaseController extends AbstractController
+class DataHandler
 {
     /*Set a universal*/
     public const ENTITY_NAMESPACE = 'App\\Entity\\';
 
     protected $objectHandler;
+    protected $entityManager;
+    protected $formFactory;
+    protected $serializer;
 
-    public function __construct(ObjectHandler $objectHandler)
+    public function __construct(ObjectHandler $objectHandler, EntityManager $entityManager, FormFactory $formFactory, Serializer $serializer)
     {
         $this->objectHandler = $objectHandler;
+        $this->entityManager = $entityManager;
+        $this->formFactory = $formFactory;
+        $this->serializer = $serializer;
     }
 
     /**
@@ -38,10 +46,10 @@ abstract class BaseController extends AbstractController
      *
      * @return bool
      */
-    protected function postRequest(Request $request, $entityPath, $formPath): bool
+    public function createRecord(Request $request, $entityPath, $formPath): bool
     {
         /*Grab the Doctrine Entity Manager so that we can process our Entity to the database.*/
-        $entityManager = $this->getDoctrine()->getManager();
+        $entityManager = $this->entityManager;
 
         /*Unpack and decode data from $request in order to obtain form information.*/
         $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
@@ -50,7 +58,7 @@ abstract class BaseController extends AbstractController
         $entity = new $entityPath();
 
         /*Create form with corresponding Entity paired to it*/
-        $form = $this->createForm($formPath, $entity);
+        $form = $this->formFactory->create($formPath, $entity);
 
         /*Submit $data that was unpacked from the $response into the $form.*/
         $form->submit($data);
@@ -103,14 +111,12 @@ abstract class BaseController extends AbstractController
     }
 
     /**
-     * @param \Symfony\Component\HttpFoundation\Request $request
-     *
      * todo julianlankerd@gmail.com, build a filtration system, and actually use $request!
      *
      * @return string
      * @throws \ReflectionException
      */
-    protected function getAllValues(Request $request): ?string
+    public function getAllValues(): ?string
     {
         try {
             $entityName = str_replace('Controller', '', (new ReflectionClass($this))->getShortName());
@@ -123,24 +129,26 @@ abstract class BaseController extends AbstractController
         }
 
         try {
-            return new Response(
-                $this->container->get('serializer')->serialize($this->getDoctrine()->getRepository($path)->findAll(), 'json'),
-                Response::HTTP_OK,
-                ['Content-type' => 'application/json']
-            );
+            $response = [
+                    $this->serializer->serialize($this->entityManager->getRepository($path)->findAll(), 'json'),
+                    Response::HTTP_OK,
+                    ['Content-type' => 'application/json']
+                ];
         } catch (ReflectionException $e) {
             throw $e;
         }
+
+        return new Response($response);
     }
 
     /**
      * @param \Symfony\Component\HttpFoundation\Request $request
      * @throws Exception
      */
-    public function coupler(Request $request): void
+    public function connectRecords(Request $request): void
     {
         /*Grab the Doctrine Entity Manager so that we can process our Entity to the database.*/
-        $entityManager = $this->getDoctrine()->getManager();
+        $entityManager = $this->entityManager;
 
         /*Unpack and decode data from $request in order to obtain form information.*/
         $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
@@ -160,7 +168,7 @@ abstract class BaseController extends AbstractController
          * relationships towards.
          */
         try {
-            $primaryEntity = $this->getDoctrine()->getRepository('App:'.key($primaryEntity))->findBy(
+            $primaryEntity = $entityManager->getRepository('App:'.key($primaryEntity))->findBy(
                 $primaryEntity[key($primaryEntity)]
             );
         } catch (Exception $e) {
@@ -230,7 +238,7 @@ abstract class BaseController extends AbstractController
              * relationships towards.
              */
             try {
-                $returnedValue = $this->getDoctrine()->getRepository('App:'.$entityName)->findBy($entityData);
+                $returnedValue = $this->entityManager->getRepository('App:'.$entityName)->findBy($entityData);
             } catch (Exception $e) {
                 throw new RuntimeException($e->getMessage());
             }
