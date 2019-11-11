@@ -11,7 +11,7 @@ use ReflectionClass;
 use ReflectionException;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\{Request, Response};
-use Symfony\Component\Form\FormFactory;
+use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Serializer\Serializer;
 
 
@@ -31,7 +31,7 @@ class DataHandler
     protected $formFactory;
     protected $serializer;
 
-    public function __construct(ObjectHandler $objectHandler, EntityManager $entityManager, FormFactory $formFactory, Serializer $serializer)
+    public function __construct(ObjectHandler $objectHandler, EntityManager $entityManager, FormFactoryInterface $formFactory, Serializer $serializer)
     {
         $this->objectHandler = $objectHandler;
         $this->entityManager = $entityManager;
@@ -65,9 +65,6 @@ class DataHandler
         /*Check if the current $form has been submitted, and is valid.*/
         if ($form->isSubmitted() && $form->isValid())
         {
-            /*TODO REMOVE THIS ASAP IT IS NOT A GREAT IDEA. VERY DANGEROUS.*/
-            $entityId = null;
-
             /**
              * Encapsulate attempt to store data
              * into database with try-catch. This
