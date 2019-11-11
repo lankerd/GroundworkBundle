@@ -108,7 +108,7 @@ class DataHandler
     }
 
     /**
-     * todo julianlankerd@gmail.com, build a filtration system, and actually use $request!
+     * julianlankerd@gmail.com, build a filtration system, and actually use $request!
      *
      * @return string
      * @throws \ReflectionException
@@ -214,7 +214,7 @@ class DataHandler
              *
              * Sorry for any temporary inconveniences! It'll be usable soon!
              *
-             * todo: julianlankerd@gmail.com needs to build association functionality capable in the "coupler"
+             * julianlankerd@gmail.com needs to build association functionality capable in the "coupler"
              */
             
             foreach ($entityData as $index => $entityDatum) {
