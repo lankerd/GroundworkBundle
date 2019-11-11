@@ -3,8 +3,6 @@
 namespace Lankerd\GroundworkBundle\Command;
 
 use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -35,7 +33,7 @@ class GroundworkImportCommand extends ContainerAwareCommand
 
         $emptyTablesOption = $input->getOption('drop_tables');
         /* We will initially run some removal scripts (if any are present)*/
-        if (strstr('true', $emptyTablesOption)) {
+        if (strpos('true', $emptyTablesOption) !== false) {
             $tablesToDelete = $this->getContainer()->getParameter('foreign_key_tables_to_delete');
             if (!empty($tablesToDelete)) {
                 $command = $this->getApplication()->find('groundwork:table:delete');
@@ -72,7 +70,6 @@ class GroundworkImportCommand extends ContainerAwareCommand
         $this->services = $fileNames;
 
         $this->processServices($services, $importPath, $trimmedFilesToImport);
-
     }
 
     /**
@@ -82,7 +79,7 @@ class GroundworkImportCommand extends ContainerAwareCommand
      *
      * @throws \Exception
      */
-    public function processServices($services, $importPath, $filesToImport)
+    public function processServices($services, $importPath, $filesToImport): void
     {
         foreach ($services as $service) {
             if (is_array($service)) {
@@ -103,7 +100,7 @@ class GroundworkImportCommand extends ContainerAwareCommand
      *
      * @throws \Exception
      */
-    private function runServices($service, $importPath, $filesToImport)
+    private function runServices($service, $importPath, $filesToImport): void
     {
         foreach ($filesToImport as $key => $fileToImport) {
             /*Strip the extension off of the filename in order to run the file in it's correct */

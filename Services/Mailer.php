@@ -136,5 +136,4 @@ class Mailer
 	{
 		$this->mailer->send($message);
 	}
-
 }

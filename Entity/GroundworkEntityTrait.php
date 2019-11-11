@@ -22,6 +22,7 @@ trait GroundworkEntityTrait
      * lister.
      *
      * @param bool $isFormatted
+     * @param bool $allowObjects
      *
      * @return array
      * @throws \ReflectionException
@@ -55,21 +56,10 @@ trait GroundworkEntityTrait
         return $propertyNames;
     }
 
-    /*@TODO Need to build out a filter generator. We will take the types and build a form filter out of what we have been provided in the PHPdocs.*/
-    public function fullPropertyList()
-    {
-        $propertyNames = array();
-        foreach ($this->getClassReflection()->getProperties() as $property) {
-            $property->setAccessible(true);
-            if (preg_match('/@var\s+([^\s]+)/', $property->getDocComment(), $matches)) {
-                list(, $type) = $matches;
-                dump($matches[1], $property->getName());
-            }
-        }
-        die;
-        return $propertyNames;
-    }
-
+    /**
+     * @return null
+     * @throws \ReflectionException
+     */
     public function freePropertiesValues()
     {
         $propertyNames = null;
@@ -149,3 +139,4 @@ trait GroundworkEntityTrait
         return (new ReflectionClass($this));
     }
 }
+

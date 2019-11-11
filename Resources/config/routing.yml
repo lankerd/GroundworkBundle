@@ -1,11 +1,2 @@
-#login:
-#    path:  /login
-#    defaults: { _controller: FOSUserBundle:Security:login }
-#
-#login_check:
-#    path:  /login_check
-#    defaults: { _controller: FOSUserBundle:Security:check }
-#
-#logout:
-#    path:  /logout
-#    defaults: { _controller: FOSUserBundle:Security:logout }
+
+
