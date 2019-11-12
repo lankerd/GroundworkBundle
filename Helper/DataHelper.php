@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace Lankerd\GroundworkBundle\Handler;
+namespace Lankerd\GroundworkBundle\Helper;
 
 use ReflectionClass;
 use ReflectionException;

@@ -5,6 +5,7 @@ namespace Lankerd\GroundworkBundle\Handler;
 use Doctrine\ORM\EntityManager;
 use DomainException;
 use Exception;
+use Lankerd\GroundworkBundle\Helper\DataHelper;
 use LogicException;
 use ReflectionClass;
 use ReflectionException;
@@ -25,14 +26,14 @@ class DataHandler
     /*Set a universal*/
     public const ENTITY_NAMESPACE = 'App\\Entity\\';
 
-    protected $objectHandler;
+    protected $dataHelper;
     protected $entityManager;
     protected $formFactory;
     protected $serializer;
 
-    public function __construct(ObjectHandler $objectHandler, EntityManager $entityManager, FormFactoryInterface $formFactory, Serializer $serializer)
+    public function __construct(DataHelper $dataHelper, EntityManager $entityManager, FormFactoryInterface $formFactory, Serializer $serializer)
     {
-        $this->objectHandler = $objectHandler;
+        $this->dataHelper = $dataHelper;
         $this->entityManager = $entityManager;
         $this->formFactory = $formFactory;
         $this->serializer = $serializer;
@@ -173,10 +174,10 @@ class DataHandler
         }
 
         /*Check if there are many objects that have been returned to the return*/
-        $primaryEntity = $this->objectHandler->hasOneValue($primaryEntity, 'primaryEntity');
+        $primaryEntity = $this->dataHelper->hasOneValue($primaryEntity, 'primaryEntity');
 
         try {
-            $objectProperties = $this->objectHandler->getObjectProperties($primaryEntity);
+            $objectProperties = $this->dataHelper->getObjectProperties($primaryEntity);
         } catch (ReflectionException $e) {
             throw $e;
         }
@@ -201,7 +202,7 @@ class DataHandler
                 $entityName = explode('_',$entityName)[0];
             }
 
-            $entityName = $this->objectHandler->singularize(ucfirst($entityName));
+            $entityName = $this->dataHelper->singularize(ucfirst($entityName));
 
             /**
              * Check if any of the properties passed are an array.
@@ -241,7 +242,7 @@ class DataHandler
             }
 
             /*Check if there are many objects that have been returned to the return*/
-            $entity = $this->objectHandler->hasOneValue($returnedValue, $entityName);
+            $entity = $this->dataHelper->hasOneValue($returnedValue, $entityName);
 
             $bindingMethod = null;
             foreach ($objectProperties [ucfirst($entityName)] as $objectMethod) {
