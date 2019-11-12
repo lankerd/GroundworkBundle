@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace Lankerd\GroundworkBundle\Util;
+namespace Lankerd\GroundworkBundle\Helper;
 
 use ReflectionClass;
 use ReflectionException;
@@ -21,7 +21,7 @@ use Doctrine\Common\Inflector\Inflector;
  *
  * @author Julian Lankerd <julianlankerd@gmail.com>
  */
-class ObjectHandler
+class DataHelper
 {
     /**
      * Will provide a singularized string
