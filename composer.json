@@ -20,15 +20,16 @@
 		]
 	},
 	"require": {
-		"php": "^7.0",
+		"php": "^7.2",
 		"twig/twig": "^2.0",
         "doctrine/doctrine-bundle": "^1.10",
         "league/csv": "^9.2",
 		"doctrine/orm": "^2.6.2",
 		"symfony/orm-pack": "^1.0.6",
-		"symfony/serializer": "^3.4|^4.3",
-		"symfony/form": "^3.4|^4.3",
+		"symfony/serializer": "^4.3",
+		"symfony/form": "^4.3",
 		"doctrine/inflector": "^1.0",
 		"ext-json": "*"
-	}
+	},
+	"minimum-stability": "dev"
 }
