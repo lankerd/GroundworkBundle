@@ -20,7 +20,7 @@
 		]
 	},
 	"require": {
-		"php": "^7.0",
+		"php": "^7.2",
 		"twig/twig": "^2.0",
         "doctrine/doctrine-bundle": "^1.10",
         "league/csv": "^9.2",

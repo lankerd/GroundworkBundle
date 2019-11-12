@@ -5,7 +5,6 @@ namespace Lankerd\GroundworkBundle\Handler;
 use Doctrine\ORM\EntityManager;
 use DomainException;
 use Exception;
-use Lankerd\GroundworkBundle\Util\ObjectHandler;
 use LogicException;
 use ReflectionClass;
 use ReflectionException;
@@ -112,6 +111,7 @@ class DataHandler
      *
      * @return string
      * @throws \ReflectionException
+     * @throws \Exception
      */
     public function getAllValues(): ?string
     {
@@ -131,7 +131,7 @@ class DataHandler
                     Response::HTTP_OK,
                     ['Content-type' => 'application/json']
                 ];
-        } catch (ReflectionException $e) {
+        } catch (Exception $e) {
             throw $e;
         }
 
