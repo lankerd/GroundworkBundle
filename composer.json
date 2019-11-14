@@ -25,7 +25,7 @@
         "doctrine/doctrine-bundle": "^1.10",
         "league/csv": "^9.2",
 		"doctrine/orm": "^2.6.2",
-		"symfony/orm-pack": "^1.0.6",
+		"symfony/orm-pack": "dev-master",
 		"symfony/serializer": "^4.3",
 		"symfony/form": "^4.3",
 		"doctrine/inflector": "^1.0",

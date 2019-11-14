@@ -11,6 +11,7 @@
 
 namespace Lankerd\GroundworkBundle\Helper;
 
+use LogicException;
 use ReflectionClass;
 use ReflectionException;
 use RuntimeException;
@@ -23,6 +24,11 @@ use Doctrine\Common\Inflector\Inflector;
  */
 class DataHelper
 {
+    /*Set a universal*/
+    public const ENTITY_NAMESPACE = 'App\\Entity\\';
+    public const FORM_NAMESPACE = 'App\\Form\\';
+    public const SYMFONY_FORM_NAME_TAIL = 'Type';
+
     /**
      * Will provide a singularized string
      *
@@ -148,5 +154,58 @@ class DataHelper
          * been associated to the object.
          */
         return $objectProperties;
+    }
+
+    /**
+     * @return mixed
+     * @throws \ReflectionException
+     */
+    public function getEntityPath(): string
+    {
+        try {
+            $entityName = str_replace('Controller', '', (new ReflectionClass($this))->getShortName());
+        } catch (ReflectionException $e) {
+            throw $e;
+        }
+
+        $entityPath = self::ENTITY_NAMESPACE.$entityName;
+
+        if (!class_exists($entityPath)) {
+            throw new LogicException($entityPath.' does not exist!');
+        }
+
+        return $entityPath;
+    }
+
+    /**
+     * @return mixed
+     * @throws \ReflectionException
+     */
+    public function getFormPath(): string
+    {
+        $entityName = $this->getEntityPath();
+
+        $formPath = self::FORM_NAMESPACE.$entityName;
+
+        if (!class_exists($formPath.self::SYMFONY_FORM_NAME_TAIL)) {
+            if (!class_exists($formPath)) {
+                throw new LogicException('Neither \''.$formPath.self::SYMFONY_FORM_NAME_TAIL.'\' or \''.$formPath.'\' does not seem exist! Perhaps change the %lankerd_groundwork.form.path%');
+            }
+        }
+
+        return $formPath;
+    }
+
+    /**
+     * @param object
+     *
+     * @return mixed
+     * @throws \ReflectionException
+     */
+    public function getEntity(): object
+    {
+        $entityPath = $this->getEntityPath();
+
+        return new $entityPath;
     }
 }
