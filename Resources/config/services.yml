@@ -11,7 +11,7 @@ services:
     Lankerd\GroundworkBundle\Helper\DataHelper: ~
 
     Lankerd\GroundworkBundle\Helper\QueryHelper:
-        arguments: ['@doctrine.orm.entity_manager.abstract']
+        arguments: ['@doctrine.orm.entity_manager']
 
     Lankerd\GroundworkBundle\Handler\DataHandler:
         arguments: ['@Lankerd\GroundworkBundle\Helper\DataHelper', '@form.factory', '@serializer', '@Lankerd\GroundworkBundle\Helper\QueryHelper']
