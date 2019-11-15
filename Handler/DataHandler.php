@@ -5,14 +5,13 @@ namespace Lankerd\GroundworkBundle\Handler;
 use Doctrine\ORM\EntityManager;
 use DomainException;
 use Exception;
-use Lankerd\GroundworkBundle\Helper\DataHelper;
+use Lankerd\GroundworkBundle\Helper\DataHelperInterface;
 use Lankerd\GroundworkBundle\Helper\QueryHelper;
 use ReflectionException;
 use RuntimeException;
-use Symfony\Component\HttpFoundation\{Request, Response};
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Serializer\Serializer;
-
 
 class DataHandler
 {
@@ -20,9 +19,10 @@ class DataHandler
     protected $formFactory;
     protected $serializer;
     protected $queryHelper;
+    protected $classPath;
 
     public function __construct(
-        DataHelper $dataHelper,
+        DataHelperInterface $dataHelper,
         FormFactoryInterface $formFactory,
         Serializer $serializer,
         QueryHelper $queryHelper
@@ -33,42 +33,54 @@ class DataHandler
         $this->queryHelper = $queryHelper;
     }
 
+    public function setClass($class)
+    {
+        $this->dataHelper->setClassName($class);
+    }
+    
     /**
+     * THIS NEEDS TO BE REWRITTEN WHEN I AM MORE CONCIOUS. TOO TIRED TO WRITE GOOD CODE.
+     *
      * @param Request $request
      *
      * @return array
      * @throws \ReflectionException
      * @throws \Exception
      */
-    public function updateRecord(Request $request): array
+    public function updateRecord(Request $request): int
     {
         $dataHelper = $this->dataHelper;
-
+        
         /*Unpack and decode data from $request in order to obtain form information.*/
         $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
 
+        if(empty($data['targetEntity']) || empty($data['updateValues'])){
+            throw new RuntimeException('Data that was sent is incorrectly formatted!');
+        }
+
         /*Instantiate a new User object for us to insert the $request form data into.*/
-        $entity = $this->queryHelper->getEntityRepository($dataHelper->getEntityPath());
+
+        if (count($entity = $this->queryHelper->getEntityRepository($dataHelper->getEntityPath())->findBy($data['targetEntity'])) === 1){
+            $entity = $entity[0];
+        }else{
+            throw new RuntimeException('Data that was sent is too vauge to accuratly update, please supply more detail in order to narrow the search scope');
+        }
 
         /*Create form with corresponding Entity paired to it*/
-        $form = $this->formFactory->create($dataHelper->getFormPath(), $entity);
-
-        /*Submit $data that was unpacked from the $response into the $form.*/
-        $form->submit($data);
-
-        /*Check if the current $form has been submitted, and is valid.*/
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->queryHelper->persistEntity($entity);
-
-            $response = [
-                $entity,
-                Response::HTTP_OK,
-                ['Content-type' => 'application/json'],
-            ];
-
-            return $response;
+        $bindingMethod = [];
+        $objectMethods = $this->dataHelper->getObjectProperties($entity);
+        foreach ($data['updateValues'] as $key => $updateValue) {
+            if (array_key_exists(ucfirst(strtolower($key)), $objectMethods)){
+                foreach ($objectMethods[ucfirst(strtolower($key))] as $objectMethod) {
+                    if (false !== stripos($objectMethod, 'set')) {
+                        $entity->$objectMethod($updateValue);
+                    }
+                }
+            }
         }
-        throw new RuntimeException('There was an issue with the data sent!');
+
+        $this->queryHelper->persistEntity($entity);
+        return $entity->getId();
     }
 
     /**
@@ -76,10 +88,10 @@ class DataHandler
      * @param         $entityPath
      * @param         $formPath
      *
-     * @return array
+     * @return int
      * @throws \ReflectionException
      */
-    public function createRecord(Request $request): array
+    public function createRecord(Request $request): int
     {
         $dataHelper = $this->dataHelper;
 
@@ -98,13 +110,7 @@ class DataHandler
         if ($form->isSubmitted() && $form->isValid()) {
             $this->queryHelper->persistEntity($entity);
 
-            $response = [
-                $entity,
-                Response::HTTP_OK,
-                ['Content-type' => 'application/json'],
-            ];
-
-            return $response;
+            return $entity->getId();
         }
         throw new RuntimeException('There was an issue with the data sent!');
     }
@@ -112,19 +118,12 @@ class DataHandler
     /**
      * julianlankerd@gmail.com, build a filtration system, and actually use $request!
      *
-     * @return array
+     * @return string
      * @throws \Exception
      */
-    public function getAllValues(): array
+    public function getAllValues(): string
     {
-        return [
-            $this->serializer->serialize(
-                $this->queryHelper->getEntityRepository($this->dataHelper->getEntityPath())->findAll(),
-                'json'
-            ),
-            Response::HTTP_OK,
-            ['Content-type' => 'application/json'],
-        ];
+        return $this->serializer->serialize($this->queryHelper->getEntityRepository($this->dataHelper->getClassName())->findAll(), 'json');
     }
 
     /**
@@ -227,7 +226,7 @@ class DataHandler
             $entity = $this->dataHelper->hasOneValue($returnedValue, $entityName);
 
             $bindingMethod = null;
-            foreach ($objectProperties [ucfirst($entityName)] as $objectMethod) {
+            foreach ($objectProperties[ucfirst($entityName)] as $objectMethod) {
                 if (false !== stripos($objectMethod, 'add')) {
                     $bindingMethod = $objectMethod;
                 }

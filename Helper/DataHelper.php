@@ -22,13 +22,47 @@ use Doctrine\Common\Inflector\Inflector;
  *
  * @author Julian Lankerd <julianlankerd@gmail.com>
  */
-class DataHelper
+class DataHelper implements DataHelperInterface
 {
-    /*Set a universal*/
+    /*Set these as global params!*/
+    /**
+     *
+     */
     public const ENTITY_NAMESPACE = 'App\\Entity\\';
+    /**
+     *
+     */
     public const FORM_NAMESPACE = 'App\\Form\\';
+    /**
+     *
+     */
     public const SYMFONY_FORM_NAME_TAIL = 'Type';
 
+    /**
+     * @var
+     */
+    protected $className;
+
+    protected $entityName;
+
+
+    /**
+     * @return string
+     */
+    public function getClassName(): string
+    {
+        return $this->className;
+    }
+
+    /**
+     * @param $class
+     *
+     * @throws \ReflectionException
+     */
+    public function setClassName($class): void
+    {
+        $this->className = (new ReflectionClass($class))->getShortName();
+    }
     /**
      * Will provide a singularized string
      *
@@ -163,7 +197,8 @@ class DataHelper
     public function getEntityPath(): string
     {
         try {
-            $entityName = str_replace('Controller', '', (new ReflectionClass($this))->getShortName());
+            $entityName = str_replace('Controller', '', $this->getClassName());
+            $this->setEntityName($entityName);
         } catch (ReflectionException $e) {
             throw $e;
         }
@@ -183,17 +218,32 @@ class DataHelper
      */
     public function getFormPath(): string
     {
-        $entityName = $this->getEntityPath();
+        $entityName = $this->getEntityName();
 
-        $formPath = self::FORM_NAMESPACE.$entityName;
-
-        if (!class_exists($formPath.self::SYMFONY_FORM_NAME_TAIL)) {
-            if (!class_exists($formPath)) {
-                throw new LogicException('Neither \''.$formPath.self::SYMFONY_FORM_NAME_TAIL.'\' or \''.$formPath.'\' does not seem exist! Perhaps change the %lankerd_groundwork.form.path%');
-            }
+        /*Need to make this into a configuration*/
+        $formPath = self::FORM_NAMESPACE.$entityName.self::SYMFONY_FORM_NAME_TAIL;
+        
+        if (!class_exists($formPath)) {
+            throw new LogicException('Neither \''.$formPath.self::SYMFONY_FORM_NAME_TAIL.'\' or \''.$formPath.'\' does not seem exist! Perhaps change the %lankerd_groundwork.form.path%');
         }
 
         return $formPath;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getEntityName()
+    {
+        return $this->entityName;
+    }
+
+    /**
+     * @param mixed $entityName
+     */
+    public function setEntityName($entityName): void
+    {
+        $this->entityName = $entityName;
     }
 
     /**

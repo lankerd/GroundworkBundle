@@ -5,6 +5,7 @@ namespace Lankerd\GroundworkBundle\Helper;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Exception;
+use RuntimeException;
 
 
 class QueryHelper
@@ -26,19 +27,38 @@ class QueryHelper
         $entityManager = $this->entityManager;
 
         /**
-         * Persist() will make an instance of the entity
-         * available for doctrine to submit to the Database.
+         * Encapsulate attempt to store data
+         * into database with try-catch. This
+         * will ensure in the case of an error
+         * we will catch the exception, and throw
+         * it back as a suitable response.
          */
-        $entityManager->persist($entity);
-
-        /**
-         * Using Flush() causes write operations against the
-         * database to be executed. Which means if you
-         * used Persist($object) before flushing,
-         * You'll end up inserting a new record
-         * into the Database.
-         */
-        $entityManager->flush();
+        try {
+            /**
+             * Persist() will make an instance of the entity
+             * available for doctrine to submit to the Database.
+             */
+            $entityManager->persist($entity);
+            /**
+             * Using Flush() causes write operations against the
+             * database to be executed. Which means if you
+             * used Persist($object) before flushing,
+             * You'll end up inserting a new record
+             * into the Database.
+             */
+            $entityManager->flush();
+        } catch (Exception $e) {
+            /**
+             * Throw a new exception to inform sender of the error.
+             *
+             * If an exception is thrown (an error is found), it will stop the process,
+             * and show the error that occurred in the "try" brackets.
+             * Instead of showing the exact error that occured in the exception,
+             * we're gonna over-generalize the error, because you never know when
+             * something nefarious may be afoot.
+             */
+            throw new RuntimeException('There was an issue inserting the record!', $e->getCode());
+        }
     }
 
     /**

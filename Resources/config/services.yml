@@ -8,10 +8,13 @@ services:
         class: Lankerd\GroundworkBundle\Services\Mailer
         arguments: ["@mailer"]
 
-    Lankerd\GroundworkBundle\Helper\DataHelper: ~
+    lankerd_groundwork.helper.data_helper:
+        class: Lankerd\GroundworkBundle\Helper\DataHelper
+
+    Lankerd\GroundworkBundle\Helper\DataHelperInterface: '@lankerd_groundwork.helper.data_helper'
 
     Lankerd\GroundworkBundle\Helper\QueryHelper:
-        arguments: ['@doctrine.orm.entity_manager.abstract']
+        arguments: ['@doctrine.orm.entity_manager']
 
     Lankerd\GroundworkBundle\Handler\DataHandler:
-        arguments: ['@Lankerd\GroundworkBundle\Helper\DataHelper', '@form.factory', '@serializer', '@Lankerd\GroundworkBundle\Helper\QueryHelper']
+        arguments: ['@lankerd_groundwork.helper.data_helper', '@form.factory', '@serializer', '@Lankerd\GroundworkBundle\Helper\QueryHelper']
