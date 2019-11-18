@@ -33,7 +33,7 @@ class DataHandler
         $this->queryHelper = $queryHelper;
     }
 
-    public function setClass($class)
+    public function setClass(string $class)
     {
         $this->dataHelper->setClassName($class);
     }
@@ -60,7 +60,7 @@ class DataHandler
 
         /*Instantiate a new User object for us to insert the $request form data into.*/
 
-        if (count($entity = $this->queryHelper->getEntityRepository($dataHelper->getEntityPath())->findBy($data['targetEntity'])) === 1){
+        if (count($entity = $this->queryHelper->getEntityRepository($dataHelper->getClassPath())->findBy($data['targetEntity'])) === 1){
             $entity = $entity[0];
         }else{
             throw new RuntimeException('Data that was sent is too vauge to accuratly update, please supply more detail in order to narrow the search scope');

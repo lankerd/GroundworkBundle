@@ -27,7 +27,7 @@ interface DataHelperInterface
     /**
      * @param $class
      */
-    public function setClassName($class): void;
+    public function setClassName(string $class): void;
 
     /**
      * @return string
@@ -64,11 +64,6 @@ interface DataHelperInterface
      */
     public function getObjectProperties(object $object) : array;
 
-    /**
-     * @return string
-     */
-    public function getEntityPath(): string;
-    
     /**
      * @return string
      */
