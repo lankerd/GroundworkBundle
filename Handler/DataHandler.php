@@ -60,6 +60,18 @@ class DataHandler
     }
 
     /**
+     * Check to see if the specified class exists
+     *
+     * @param string $class
+     *
+     * @throws \RuntimeException
+     */
+    public function setClass(string $class)
+    {
+        $this->dataHelper->setClassName($class);
+    }
+
+    /**
      * THIS NEEDS TO BE REWRITTEN WHEN I AM MORE CONSCIOUS. TOO TIRED TO WRITE GOOD CODE.
      *
      * @param Request $request
@@ -70,7 +82,7 @@ class DataHandler
     public function updateRecord(Request $request): int
     {
         $dataHelper = $this->dataHelper;
-        
+
         /*Unpack and decode data from $request in order to obtain form information.*/
         $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
 
