@@ -79,7 +79,7 @@ class QueryHelper
              * we're gonna over-generalize the error, because you never know when
              * something nefarious may be afoot.
              */
-            throw new RuntimeException('There was an issue inserting the record!', $e->getCode());
+            throw new RuntimeException($e->getMessage());
         }
     }
 
