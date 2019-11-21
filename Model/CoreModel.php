@@ -160,7 +160,7 @@ abstract class CoreModel implements ConditionsInterface
                             break;
                         default:
                             unset($data[$k][$name]);
-                            continue;
+                            continue 2;
                     endswitch;
                 $data[$k][$name] = $value;
             }
@@ -216,7 +216,7 @@ abstract class CoreModel implements ConditionsInterface
                 if (isset($datum[ucfirst($property)])){
                     $doctrineAliasArguments[$prettyProperty] = $datum[ucfirst($property)];
                 }else{
-                    if ($property == "id") {
+                    if ($property === 'id') {
                         $doctrineAliasArguments[$prettyProperty] = null;
                     }
                 }
@@ -226,13 +226,13 @@ abstract class CoreModel implements ConditionsInterface
             /*Trim off the first unnecessary comma*/
             $doctrineFieldAliases = ltrim($doctrineFieldAliases, ', ');
             $tableFields = ltrim($tableFields, ', ');
-            $sql = "REPLACE INTO `".$this->getOptions()['currentService']."` (".$tableFields.") VALUES (".$doctrineFieldAliases.")";
+            $sql = 'REPLACE INTO `'.$this->getOptions()['currentService'].'` ('.$tableFields.') VALUES ('.$doctrineFieldAliases.')';
             $em = $this->entityManager->getEntityManager();
             $stmt = $em->getConnection()->prepare($sql);
             foreach ($doctrineAliasArguments as $argumentKey => $argument) {
                 $trimmedArgument = trim($argument);
-                if (in_array($argumentKey, array_keys($entityFieldTypes))){
-                    if (strstr($entityFieldTypes[$argumentKey], 'int')){
+                if (array_key_exists($argumentKey, $entityFieldTypes)){
+                    if (strpos($entityFieldTypes[$argumentKey], 'int') !== false){
                         if (!empty($trimmedArgument)){
                             $integerArgument = (integer) $trimmedArgument;
                             $stmt->bindValue(':'.$argumentKey, $integerArgument, ParameterType::INTEGER);
@@ -241,7 +241,7 @@ abstract class CoreModel implements ConditionsInterface
                             $stmt->bindValue(':'.$argumentKey, $nullField, ParameterType::NULL);
                         }
                     }
-                    if (strstr($entityFieldTypes[$argumentKey], '\DateTime')){
+                    if (strpos($entityFieldTypes[$argumentKey], '\DateTime') !== false){
                         if (!empty($trimmedArgument)){
                             $date = \DateTime::createFromFormat ('Y-m-d H:i:s', $trimmedArgument);
                             if ($date === false){
@@ -253,7 +253,7 @@ abstract class CoreModel implements ConditionsInterface
                             $stmt->bindValue(':'.$argumentKey, $date, ParameterType::LARGE_OBJECT);
                         }
                     }
-                    if (strstr($entityFieldTypes[$argumentKey], 'string')){
+                    if (strpos($entityFieldTypes[$argumentKey], 'string') !== false){
                         /*Check for weird encoding issues they might arise*/
                         if(mb_detect_encoding($trimmedArgument, 'UTF-8', true) === false){
                             /**
@@ -265,7 +265,7 @@ abstract class CoreModel implements ConditionsInterface
                         }
                         $stmt->bindValue(':'.$argumentKey, $trimmedArgument);
                     }
-                    if (strstr($entityFieldTypes[$argumentKey], 'float')){
+                    if (strpos($entityFieldTypes[$argumentKey], 'float') !== false){
                         if (!empty($trimmedArgument)){
                             $floatingArgument = (float) $trimmedArgument;
                             $stmt->bindValue(':'.$argumentKey, $floatingArgument, ParameterType::INTEGER);
@@ -282,7 +282,6 @@ abstract class CoreModel implements ConditionsInterface
 
     /**
      * @param      $fullPath
-     * @param null $parentEntity
      *
      * @throws \Doctrine\Common\Persistence\Mapping\MappingException
      * @throws \Doctrine\DBAL\DBALException

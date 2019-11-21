@@ -7,9 +7,17 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
+/**
+ * Class GroundworkTableDeleteCommand
+ *
+ * @package Lankerd\GroundworkBundle\Command
+ * @author  Julian Lankerd <julianlankerd@gmail.com>
+ */
 class GroundworkTableDeleteCommand extends ContainerAwareCommand
 {
-
+    /**
+     *
+     */
     protected function configure()
     {
         $this
@@ -18,6 +26,12 @@ class GroundworkTableDeleteCommand extends ContainerAwareCommand
             ->addArgument('tableName', InputArgument::REQUIRED, 'The desired table name, for example: "user_address"');
     }
 
+    /**
+     * @param \Symfony\Component\Console\Input\InputInterface   $input
+     * @param \Symfony\Component\Console\Output\OutputInterface $output
+     *
+     * @return int|void
+     */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $tableName = (string) $input->getArgument('tableName');

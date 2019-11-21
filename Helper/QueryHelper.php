@@ -1,17 +1,39 @@
 <?php
-
+/**
+ *
+ * This file is part of the LankerdGroundworkBundle package.
+ *
+ * <https://github.com/lankerd/GroundworkBundle//>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ *
+ */
 namespace Lankerd\GroundworkBundle\Helper;
 
-use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Exception;
 use RuntimeException;
 
 
+/**
+ * Class QueryHelper
+ *
+ * @package Lankerd\GroundworkBundle\Helper
+ * @author  Julian Lankerd <julianlankerd@gmail.com>
+ */
 class QueryHelper
 {
+    /**
+     * @var \Doctrine\ORM\EntityManagerInterface
+     */
     protected $entityManager;
 
+    /**
+     * QueryHelper constructor.
+     *
+     * @param \Doctrine\ORM\EntityManagerInterface $entityManager
+     */
     public function __construct(EntityManagerInterface $entityManager)
     {
         $this->entityManager = $entityManager;

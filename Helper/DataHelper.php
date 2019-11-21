@@ -1,14 +1,5 @@
 <?php
 
-/*
- * This file is part of the FOSRestBundle package.
- *
- * (c) FriendsOfSymfony <http://friendsofsymfony.github.com/>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
-
 namespace Lankerd\GroundworkBundle\Helper;
 
 use LogicException;
@@ -16,32 +7,30 @@ use ReflectionClass;
 use ReflectionException;
 use RuntimeException;
 use Doctrine\Common\Inflector\Inflector;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
- * Handles object
+ * Class DataHelper
  *
- * @author Julian Lankerd <julianlankerd@gmail.com>
+ * @package Lankerd\GroundworkBundle\Helper
+ * @author  Julian Lankerd <julianlankerd@gmail.com>
  */
 class DataHelper implements DataHelperInterface
 {
     /*Set these as global params!*/
-    /**
-     *
-     */
     public const ENTITY_NAMESPACE = 'App\\Entity\\';
-    /**
-     *
-     */
     public const FORM_NAMESPACE = 'App\\Form\\';
-    /**
-     *
-     */
     public const SYMFONY_FORM_NAME_TAIL = 'Type';
 
     /**
-     * @var
+     * @var string
      */
     protected $className;
+
+    /**
+     * @var array
+     */
+    protected $requestData;
 
 
     /**
@@ -50,6 +39,16 @@ class DataHelper implements DataHelperInterface
     public function getClassName(): string
     {
         return $this->className;
+    }
+
+    /**
+     * @param \Symfony\Component\HttpFoundation\Request $request
+     *
+     * @return void
+     */
+    private function setRequestData(Request $request): void
+    {
+        json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
     }
 
     /**
@@ -74,6 +73,7 @@ class DataHelper implements DataHelperInterface
         }
         $this->className = $formattedClassName;
     }
+
     /**
      * Will provide a singularized string
      *
@@ -140,7 +140,7 @@ class DataHelper implements DataHelperInterface
     public function getObjectProperties(object $object) : array
     {
         /**
-         * Initalize objectProperties array in
+         * Initialize objectProperties array in
          * order to have a place to store the
          * property names
          */
@@ -203,7 +203,6 @@ class DataHelper implements DataHelperInterface
 
     /**
      * @return mixed
-     * @throws \ReflectionException
      */
     public function getClassPath(): string
     {
@@ -220,7 +219,6 @@ class DataHelper implements DataHelperInterface
 
     /**
      * @return mixed
-     * @throws \ReflectionException
      */
     public function getFormPath(): string
     {
@@ -237,10 +235,7 @@ class DataHelper implements DataHelperInterface
     }
 
     /**
-     * @param object
-     *
      * @return mixed
-     * @throws \ReflectionException
      */
     public function getEntity(): object
     {

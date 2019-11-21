@@ -2,25 +2,51 @@
 
 namespace Lankerd\GroundworkBundle\Handler;
 
-use Doctrine\ORM\EntityManager;
 use DomainException;
 use Exception;
 use Lankerd\GroundworkBundle\Helper\DataHelperInterface;
 use Lankerd\GroundworkBundle\Helper\QueryHelper;
-use ReflectionException;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Serializer\Serializer;
 
+/**
+ * Class DataHandler
+ *
+ * @package Lankerd\GroundworkBundle\Handler
+ * @author  Julian Lankerd <julianlankerd@gmail.com>
+ */
 class DataHandler
 {
+    /**
+     * @var \Lankerd\GroundworkBundle\Helper\DataHelperInterface
+     */
     protected $dataHelper;
-    protected $formFactory;
-    protected $serializer;
-    protected $queryHelper;
-    protected $classPath;
 
+    /**
+     * @var \Symfony\Component\Form\FormFactoryInterface
+     */
+    protected $formFactory;
+
+    /**
+     * @var \Symfony\Component\Serializer\Serializer
+     */
+    protected $serializer;
+
+    /**
+     * @var \Lankerd\GroundworkBundle\Helper\QueryHelper
+     */
+    protected $queryHelper;
+
+    /**
+     * DataHandler constructor.
+     *
+     * @param \Lankerd\GroundworkBundle\Helper\DataHelperInterface $dataHelper
+     * @param \Symfony\Component\Form\FormFactoryInterface         $formFactory
+     * @param \Symfony\Component\Serializer\Serializer             $serializer
+     * @param \Lankerd\GroundworkBundle\Helper\QueryHelper         $queryHelper
+     */
     public function __construct(
         DataHelperInterface $dataHelper,
         FormFactoryInterface $formFactory,
@@ -33,18 +59,12 @@ class DataHandler
         $this->queryHelper = $queryHelper;
     }
 
-    public function setClass(string $class)
-    {
-        $this->dataHelper->setClassName($class);
-    }
-    
     /**
-     * THIS NEEDS TO BE REWRITTEN WHEN I AM MORE CONCIOUS. TOO TIRED TO WRITE GOOD CODE.
+     * THIS NEEDS TO BE REWRITTEN WHEN I AM MORE CONSCIOUS. TOO TIRED TO WRITE GOOD CODE.
      *
      * @param Request $request
      *
-     * @return array
-     * @throws \ReflectionException
+     * @return int
      * @throws \Exception
      */
     public function updateRecord(Request $request): int
@@ -85,11 +105,8 @@ class DataHandler
 
     /**
      * @param Request $request
-     * @param         $entityPath
-     * @param         $formPath
      *
      * @return int
-     * @throws \ReflectionException
      */
     public function createRecord(Request $request): int
     {
@@ -106,13 +123,15 @@ class DataHandler
 
         /*Submit $data that was unpacked from the $response into the $form.*/
         $form->submit($data);
+
         /*Check if the current $form has been submitted, and is valid.*/
         if ($form->isSubmitted() && $form->isValid()) {
             $this->queryHelper->persistEntity($entity);
 
             return $entity->getId();
         }
-        throw new RuntimeException('There was an issue with the data sent!');
+
+        throw new RuntimeException($form->getErrors()->current()->getMessage());
     }
 
     /**
@@ -163,11 +182,7 @@ class DataHandler
         /*Check if there are many objects that have been returned to the return*/
         $primaryEntity = $this->dataHelper->hasOneValue($primaryEntity, 'primaryEntity');
 
-        try {
-            $objectProperties = $this->dataHelper->getObjectProperties($primaryEntity);
-        } catch (ReflectionException $e) {
-            throw $e;
-        }
+        $objectProperties = $this->dataHelper->getObjectProperties($primaryEntity);
 
         foreach ($secondaryEntities as $entityName => $entityData) {
             /**
