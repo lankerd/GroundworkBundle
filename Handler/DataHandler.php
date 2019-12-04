@@ -258,6 +258,7 @@
                     $childEntity = null;
 
                     if(!$this->checkArrayContainArray($value)){
+                        unset($value['searchField']);
                         /* $storedEntity is an entity within the json form besides the parent. */
                         $childEntity = $queryHelper->getEntityRepository('App:'.ucfirst($key))->findBy($value);
                     }
@@ -306,9 +307,11 @@
         }
 
         private function checkArrayContainArray($array) {
-            foreach($array as $value){
-                if(is_array($value)) {
-                    return true;
+            if(!isset($array['searchField'])) {
+                foreach($array as $value){
+                    if(is_array($value)) {
+                        return true;
+                    }
                 }
             }
             return false;
@@ -331,8 +334,8 @@
                     $childEntity = null;
 
                     if(!$this->checkArrayContainArray($value)){
+                        unset($value['searchField']);
                         /* $storedEntity is an entity within the json form besides the parent. */
-                        $childEntity = $queryHelper->getEntityRepository('App:'.ucfirst($key))->findBy($value);
                         $childEntity = $queryHelper->getEntityRepository('App:'.ucfirst($key))->findBy($value);
                     }
 
