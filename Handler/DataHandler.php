@@ -5,6 +5,7 @@
     use App\Entity\User;
     use DomainException;
     use Exception;
+    use Lankerd\GroundworkBundle\Helper\DataHelper;
     use Lankerd\GroundworkBundle\Helper\DataHelperInterface;
     use Lankerd\GroundworkBundle\Helper\QueryHelper;
     use RuntimeException;
@@ -229,7 +230,6 @@
                     if (false !== stripos($objectMethod, 'add')) {
                         $bindingMethod = $objectMethod;
                     }
-                    dump($objectMethod);
 
                     if (false !== stripos($objectMethod, 'set')) {
                         $bindingMethod = $objectMethod;
@@ -254,9 +254,23 @@
 
             foreach ($data as $key => $value) {
                 if (is_array($value)) {
-                    /* $storedEntity is an entity within the json form besides the parent. */
-                    $childEntity = $queryHelper->getEntityRepository('App:'.ucfirst($key))->findBy($value);
+
+                    $childEntity = null;
+
+                    if(!$this->checkArrayContainArray($value)){
+                        unset($value['searchField']);
+                        /* $storedEntity is an entity within the json form besides the parent. */
+                        $childEntity = $queryHelper->getEntityRepository('App:'.ucfirst($key))->findBy($value);
+                    }
+
+                    if($childEntity == null){
+                        $parentClassName = $this->dataHelper->getClassName();
+                        $id = $this->createChildRecord($key, $value, $parentClassName);
+                        $childEntity = $queryHelper->getEntityRepository('App:'.ucfirst($key))->findBy(['id'=>$id]);
+                    }
+
                     $parentEntity = $dataHelper->getObjectProperties($entity);
+
                     if (array_key_exists(ucfirst($key), $parentEntity)) {
                         foreach ($parentEntity[ucfirst($key)] as $method) {
                             if (false !== stripos($method, 'set')) {
@@ -281,7 +295,6 @@
             /*Submit $data that was unpacked from the $response into the $form.*/
             $form->submit($data);
 
-
             /*Check if the current $form has been submitted, and is valid.*/
             if ($form->isSubmitted() && $form->isValid()) {
 
@@ -291,5 +304,76 @@
             }
 
             throw new RuntimeException($form->getErrors()->current()->getMessage());
+        }
+
+        private function checkArrayContainArray($array) {
+            if(!isset($array['searchField'])) {
+                foreach($array as $value){
+                    if(is_array($value)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        private function createChildRecord($key, $data, $parentClassName = null) {
+            $queryHelper = $this->queryHelper;
+
+            $dataHelper = $this->dataHelper;
+
+            $this->setClass($key);
+
+            $parentKey = $key;
+
+            $entity = $dataHelper->getEntity();
+
+            foreach ($data as $key => $value) {
+                if (is_array($value)) {
+
+                    $childEntity = null;
+
+                    if(!$this->checkArrayContainArray($value)){
+                        unset($value['searchField']);
+                        /* $storedEntity is an entity within the json form besides the parent. */
+                        $childEntity = $queryHelper->getEntityRepository('App:'.ucfirst($key))->findBy($value);
+                    }
+
+                    if($childEntity == null){
+                        $id = $this->createChildRecord($key, $value, $parentKey);
+                        $childEntity = $queryHelper->getEntityRepository('App:'.ucfirst($key))->findBy(['id'=>$id]);
+                    }
+                    $parentEntity = $dataHelper->getObjectProperties($entity);
+                    if (array_key_exists(ucfirst($key), $parentEntity)) {
+                        foreach ($parentEntity[ucfirst($key)] as $method) {
+                            if (false !== stripos($method, 'set')) {
+                                $entity->$method($childEntity[0]);
+                            }
+                            if (false !== stripos($method, 'add')) {
+                                foreach ($childEntity as $value) {
+                                    $entity->$method($value);
+                                }
+                            }
+                        }
+                    }
+                    unset($data[$key]);
+                }
+            }
+
+            /*Create form with corresponding Entity paired to it*/
+            $form = $this->formFactory->create($dataHelper->getFormPath(), $entity);
+
+            /*Submit $data that was unpacked from the $response into the $form.*/
+            $form->submit($data);
+            /*Check if the current $form has been submitted, and is valid.*/
+            if ($form->isSubmitted() && $form->isValid()) {
+
+                $this->queryHelper->persistEntity($entity);
+                $response = $entity->getId();
+                if ($parentClassName != null) {
+                    $this->setClass($parentClassName);
+                }
+                return $response;
+            }
         }
     }
