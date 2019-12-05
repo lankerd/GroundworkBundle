@@ -8,9 +8,11 @@
     use Lankerd\GroundworkBundle\Helper\DataHelperInterface;
     use Lankerd\GroundworkBundle\Helper\QueryHelper;
     use RuntimeException;
+    use Symfony\Component\Form\FormBuilder;
     use Symfony\Component\HttpFoundation\Request;
     use Symfony\Component\Form\FormFactoryInterface;
     use Symfony\Component\Serializer\Serializer;
+    use ReflectionClass;
 
     /**
      * Class DataHandler
@@ -275,8 +277,19 @@
                 }
             }
 
+            $this->handleForm($entity, $data);
+        }
+
+        public function handleForm(object $entity, array $data)
+        {
+            $dataHelper = $this->dataHelper;
+
             /*Create form with corresponding Entity paired to it*/
-            $form = $this->formFactory->create($dataHelper->getFormPath(), $entity);
+            $form = $this->formFactory->create($dataHelper->getFormPath());
+            dump();
+            die;
+            $form->remove('company');
+            $form->setData($entity);
 
             /*Submit $data that was unpacked from the $response into the $form.*/
             $form->submit($data);
@@ -284,12 +297,10 @@
 
             /*Check if the current $form has been submitted, and is valid.*/
             if ($form->isSubmitted() && $form->isValid()) {
-
                 $this->queryHelper->persistEntity($entity);
 
                 return $entity->getId();
             }
-
             throw new RuntimeException($form->getErrors()->current()->getMessage());
         }
     }
