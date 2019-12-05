@@ -133,7 +133,7 @@
         public function getAllValues(): string
         {
             return $this->serializer->serialize(
-                $this->queryHelper->getEntityRepository($this->dataHelper->getClassName())->findAll(),
+                $this->queryHelper->getEntityRepository('App:'.$this->dataHelper->getClassName())->findAll(),
                 'json'
             );
         }
