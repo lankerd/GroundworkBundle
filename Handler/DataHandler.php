@@ -376,4 +376,23 @@
                 return $response;
             }
         }
+
+        /**
+         * @return string
+         * @throws \Exception
+         */
+        public function deleteRecord(Request $request)
+        {
+            $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+            $dataObj = $this->queryHelper->getEntityRepository($this->dataHelper->getClassPath())->find($data['id']);
+            if($dataObj){
+                $this->queryHelper->removeRecord($dataObj);
+                $result = 'success';
+            } else {
+                $result = 'failed';
+            }
+            return ['result'=>$result];
+
+        }
+
     }

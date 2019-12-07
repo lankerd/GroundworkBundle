@@ -107,4 +107,48 @@ class QueryHelper
         }
         return $entityRepository;
     }
+
+    /**
+     * @param object $entity
+     *
+     * @return void
+     */
+    public function removeRecord(object $entity)
+    {
+        $entityManager = $this->entityManager;
+
+        /**
+         * Encapsulate attempt to store data
+         * into database with try-catch. This
+         * will ensure in the case of an error
+         * we will catch the exception, and throw
+         * it back as a suitable response.
+         */
+        try {
+            /**
+             * Remove() will remove instance of the entity
+             */
+            $entityManager->remove($entity);
+            /**
+             * Using Flush() causes write operations against the
+             * database to be executed. Which means if you
+             * used Persist($object) before flushing,
+             * You'll end up inserting a new record
+             * into the Database.
+             */
+            $entityManager->flush();
+        } catch (Exception $e) {
+            /**
+             * Throw a new exception to inform sender of the error.
+             *
+             * If an exception is thrown (an error is found), it will stop the process,
+             * and show the error that occurred in the "try" brackets.
+             * Instead of showing the exact error that occured in the exception,
+             * we're gonna over-generalize the error, because you never know when
+             * something nefarious may be afoot.
+             */
+            throw new RuntimeException($e->getMessage());
+        }
+    }
+
 }
