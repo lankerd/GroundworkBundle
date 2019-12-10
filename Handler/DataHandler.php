@@ -110,8 +110,8 @@
             $bindingMethod = [];
             $objectMethods = $this->dataHelper->getObjectProperties($entity);
             foreach ($data['updateValues'] as $key => $updateValue) {
-                if (array_key_exists(ucfirst(strtolower($key)), $objectMethods)) {
-                    foreach ($objectMethods[ucfirst(strtolower($key))] as $objectMethod) {
+                if (array_key_exists(ucfirst($key), $objectMethods)) {
+                    foreach ($objectMethods[ucfirst($key)] as $objectMethod) {
                         if (false !== stripos($objectMethod, 'set')) {
                             $entity->$objectMethod($updateValue);
                         }

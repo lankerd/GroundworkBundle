@@ -60,7 +60,7 @@ class DataHelper implements DataHelperInterface
      */
     public function setClassName(string $class): void
     {
-        $formattedClassName = ucfirst(strtolower($class));
+        $formattedClassName = ucfirst($class);
 
         $fullClassNamespace = self::ENTITY_NAMESPACE.$formattedClassName;
 
