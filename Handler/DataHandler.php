@@ -130,11 +130,42 @@
          * @return string
          * @throws \Exception
          */
-        public function getAllValues(): string
+        public function getAllValues(Request $request): string
         {
+            $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+            $filterEntity = array();
+            $orderBy = array();
+            $limit = null;
+            $findFunction = 'findBy';
+            if (!empty($data['filterEntity'])) {
+                $filterEntity = $data['filterEntity'];
+            }
+            if (!empty($data['orderBy'])) {
+                $orderBy = $data['orderBy'];
+            }
+            if (!empty($data['limit'])) {
+                $limit = $data['limit'];
+                if($limit == 1) {
+                    $findFunction = 'findOneBy';
+                }
+            }
+
+
+            $dataQuery = $this->queryHelper->getEntityRepository('App:'.$this->dataHelper->getClassName())->$findFunction(
+                $filterEntity, // where
+                $orderBy,      // orderBy
+                $limit         // limit
+            );
+
             return $this->serializer->serialize(
-                $this->queryHelper->getEntityRepository('App:'.$this->dataHelper->getClassName())->findAll(),
-                'json'
+                $dataQuery,
+                'json',
+                [
+                    'circular_reference_handler' => function ($object) {
+                        return $object->getId();
+                    }
+                ]
             );
         }
 
@@ -376,4 +407,23 @@
                 return $response;
             }
         }
+
+        /**
+         * @return string
+         * @throws \Exception
+         */
+        public function deleteRecord(Request $request)
+        {
+            $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+            $dataObj = $this->queryHelper->getEntityRepository($this->dataHelper->getClassPath())->find($data['id']);
+            if($dataObj){
+                $this->queryHelper->removeRecord($dataObj);
+                $result = 'success';
+            } else {
+                $result = 'failed';
+            }
+            return ['result'=>$result];
+
+        }
+
     }
