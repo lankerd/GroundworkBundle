@@ -2,10 +2,8 @@
 
     namespace Lankerd\GroundworkBundle\Handler;
 
-    use App\Entity\User;
     use DomainException;
     use Exception;
-    use Lankerd\GroundworkBundle\Helper\DataHelper;
     use Lankerd\GroundworkBundle\Helper\DataHelperInterface;
     use Lankerd\GroundworkBundle\Helper\QueryHelper;
     use RuntimeException;
