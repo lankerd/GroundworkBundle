@@ -2,17 +2,13 @@
 
 namespace Lankerd\GroundworkBundle\Handler;
 
-use App\Entity\User;
 use DomainException;
 use Exception;
 use Lankerd\GroundworkBundle\Helper\DataHelperInterface;
 use Lankerd\GroundworkBundle\Helper\QueryHelper;
 use RuntimeException;
-use Symfony\Component\Form\FormBuilder;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Form\FormFactoryInterface;
-use Symfony\Component\Serializer\Serializer;
-use ReflectionClass;
 
 /**
  * Class DataHandler
@@ -33,7 +29,7 @@ class DataHandler
     protected $formFactory;
 
     /**
-     * @var \Symfony\Component\Serializer\Serializer
+     * @var \JMS\Serializer\Serializer
      */
     protected $serializer;
 
@@ -47,13 +43,13 @@ class DataHandler
      *
      * @param \Lankerd\GroundworkBundle\Helper\DataHelperInterface $dataHelper
      * @param \Symfony\Component\Form\FormFactoryInterface $formFactory
-     * @param \Symfony\Component\Serializer\Serializer $serializer
+     * @param \JMS\Serializer\Serializer $serializer
      * @param \Lankerd\GroundworkBundle\Helper\QueryHelper $queryHelper
      */
     public function __construct(
         DataHelperInterface $dataHelper,
         FormFactoryInterface $formFactory,
-        Serializer $serializer,
+        \JMS\Serializer\Serializer $serializer,
         QueryHelper $queryHelper
     ) {
         $this->dataHelper = $dataHelper;
@@ -134,7 +130,7 @@ class DataHandler
     public function getAllValues(): string
     {
         return $this->serializer->serialize(
-            $this->queryHelper->getEntityRepository($this->dataHelper->getClassName())->findAll(),
+            $this->queryHelper->getEntityRepository($this->dataHelper::ENTITY_NAMESPACE.$this->dataHelper->getClassName())->findAll(),
             'json'
         );
     }
