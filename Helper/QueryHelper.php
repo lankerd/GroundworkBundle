@@ -112,6 +112,7 @@ class QueryHelper
      * @param object $entity
      *
      * @return void
+     * @throws \Exception
      */
     public function removeRecord(object $entity)
     {
@@ -149,6 +150,20 @@ class QueryHelper
              */
             throw new RuntimeException($e->getMessage());
         }
+    }
+
+    /**
+     * @param string $entityPath
+     *
+     * @return object
+     */
+    public function getClassMetadata(string $entityPath){
+        $entityManager = $this->entityManager;
+
+        /**
+         * this method return a class metadata object of given entity path
+         */
+        return $entityManager->getClassMetadata($entityPath);
     }
 
 }
