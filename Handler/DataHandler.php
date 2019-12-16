@@ -10,6 +10,7 @@
     use Symfony\Component\HttpFoundation\Request;
     use Symfony\Component\Form\FormFactoryInterface;
     use Symfony\Component\Serializer\Serializer;
+    use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 
     /**
      * Class DataHandler
@@ -107,8 +108,15 @@
             /*Create form with corresponding Entity paired to it*/
             $bindingMethod = [];
             $objectMethods = $this->dataHelper->getObjectProperties($entity);
+
+            $class = $this->queryHelper->getClassMetadata(get_class($entity));
             foreach ($data['updateValues'] as $key => $updateValue) {
                 if (array_key_exists(ucfirst($key), $objectMethods)) {
+
+                    if($class->hasAssociation($key)){
+                        $relationArray = $class->getAssociationMapping($key);
+                        $updateValue = $this->queryHelper->getEntityRepository($relationArray['targetEntity'])->find($updateValue);
+                    }
                     foreach ($objectMethods[ucfirst($key)] as $objectMethod) {
                         if (false !== stripos($objectMethod, 'set')) {
                             $entity->$objectMethod($updateValue);
@@ -160,8 +168,16 @@
                 $dataQuery,
                 'json',
                 [
+                    ObjectNormalizer::ENABLE_MAX_DEPTH => true,
                     'circular_reference_handler' => function ($object) {
                         return $object->getId();
+                    },
+                    'max_depth_handler' => function ($innerObject, $outerObject, string $attributeName, string $format = null, array $context = []) {
+                        if(method_exists($innerObject,'getId')){
+                            return $innerObject->getId();
+                        } else {
+                            return '';
+                        }
                     }
                 ]
             );
