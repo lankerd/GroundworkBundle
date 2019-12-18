@@ -13,6 +13,10 @@
     use Symfony\Component\Form\FormFactoryInterface;
     use Symfony\Component\Serializer\Serializer;
     use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
+    use Symfony\Component\Inflector\Inflector;
+    use Symfony\Component\Form\Extension\Core\Type\TimeType;
+    use Symfony\Component\Form\Extension\Core\Type\DateType;
+    use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 
     /**
      * Class DataHandler
@@ -295,6 +299,7 @@
 
             /*Unpack and decode data from $request in order to obtain form information.*/
             $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+            $oldData = $data;
 
             /*Instantiate a new User object for us to insert the $request form data into.*/
             $entity = $dataHelper->getEntity();
@@ -304,22 +309,29 @@
 
                     $childEntity = null;
 
+                    $singularKey = (Inflector::singularize($key));
+                    if(is_array($singularKey)){
+                        $singularKey = $singularKey[1];
+                    } else{
+                        $singularKey = $key;
+                    }
+
                     if(!$this->checkArrayContainArray($value)){
                         unset($value['searchField']);
                         /* $storedEntity is an entity within the json form besides the parent. */
-                        $childEntity = $queryHelper->getEntityRepository('App:'.ucfirst($key))->findBy($value);
+                        $childEntity = $queryHelper->getEntityRepository('App:'.ucfirst($singularKey))->findBy($value);
                     }
 
                     if($childEntity == null){
                         $parentClassName = $this->dataHelper->getClassName();
-                        $id = $this->createChildRecord($key, $value, $parentClassName);
-                        $childEntity = $queryHelper->getEntityRepository('App:'.ucfirst($key))->findBy(['id'=>$id]);
+                        $id = $this->createChildRecord($singularKey, $value, $parentClassName);
+                        $childEntity = $queryHelper->getEntityRepository('App:'.ucfirst($singularKey))->findBy(['id'=>$id]);
                     }
 
                     $parentEntity = $dataHelper->getObjectProperties($entity);
 
-                    if (array_key_exists(ucfirst($key), $parentEntity)) {
-                        foreach ($parentEntity[ucfirst($key)] as $method) {
+                    if (array_key_exists(ucfirst($singularKey), $parentEntity)) {
+                        foreach ($parentEntity[ucfirst($singularKey)] as $method) {
                             if (false !== stripos($method, 'set')) {
 
                                 $entity->$method($childEntity[0]);
@@ -337,7 +349,27 @@
             }
 
             /*Create form with corresponding Entity paired to it*/
-            $form = $this->formFactory->create($dataHelper->getFormPath(), $entity);
+            $class = $this->queryHelper->getClassMetadata(get_class($entity));
+            $form = $this->formFactory->create('Symfony\Component\Form\Extension\Core\Type\FormType', $entity, ['csrf_protection' => false]);
+
+            foreach($oldData as $key => $value) {
+                if(!$class->hasAssociation($key)){
+                    $fieldArray = $class->getFieldMapping($key);
+                    if($fieldArray['type'] == 'time'){
+                        $form->add($key, TimeType::class,['widget' => 'single_text']);
+                    } elseif ($fieldArray['type'] == 'date'){
+                        $form->add($key, DateType::class,['widget' => 'single_text']);
+                    } elseif ($fieldArray['type'] == 'datetime'){
+                        $form->add($key, DateTimeType::class,['widget' => 'single_text']);
+                    }else{
+                        $form->add($key);
+                    }
+                }else{
+                    $form->add($key);
+                }
+            }
+
+
 
             /*Submit $data that was unpacked from the $response into the $form.*/
             $form->submit($data);
@@ -372,6 +404,7 @@
             $this->setClass($key);
 
             $parentKey = $key;
+            $oldData = $data;
 
             $entity = $dataHelper->getEntity();
 
@@ -380,19 +413,26 @@
 
                     $childEntity = null;
 
+                    $singularKey = (Inflector::singularize($key));
+                    if(is_array($singularKey)){
+                        $singularKey = $singularKey[1];
+                    } else{
+                        $singularKey = $key;
+                    }
+
                     if(!$this->checkArrayContainArray($value)){
                         unset($value['searchField']);
                         /* $storedEntity is an entity within the json form besides the parent. */
-                        $childEntity = $queryHelper->getEntityRepository('App:'.ucfirst($key))->findBy($value);
+                        $childEntity = $queryHelper->getEntityRepository('App:'.ucfirst($singularKey))->findBy($value);
                     }
 
                     if($childEntity == null){
-                        $id = $this->createChildRecord($key, $value, $parentKey);
-                        $childEntity = $queryHelper->getEntityRepository('App:'.ucfirst($key))->findBy(['id'=>$id]);
+                        $id = $this->createChildRecord($singularKey, $value, $parentKey);
+                        $childEntity = $queryHelper->getEntityRepository('App:'.ucfirst($singularKey))->findBy(['id'=>$id]);
                     }
                     $parentEntity = $dataHelper->getObjectProperties($entity);
-                    if (array_key_exists(ucfirst($key), $parentEntity)) {
-                        foreach ($parentEntity[ucfirst($key)] as $method) {
+                    if (array_key_exists(ucfirst($singularKey), $parentEntity)) {
+                        foreach ($parentEntity[ucfirst($singularKey)] as $method) {
                             if (false !== stripos($method, 'set')) {
                                 $entity->$method($childEntity[0]);
                             }
@@ -408,7 +448,25 @@
             }
 
             /*Create form with corresponding Entity paired to it*/
-            $form = $this->formFactory->create($dataHelper->getFormPath(), $entity);
+            $class = $this->queryHelper->getClassMetadata(get_class($entity));
+            $form = $this->formFactory->create('Symfony\Component\Form\Extension\Core\Type\FormType', $entity, ['csrf_protection' => false]);
+
+            foreach($oldData as $key => $value) {
+                if(!$class->hasAssociation($key)){
+                    $fieldArray = $class->getFieldMapping($key);
+                    if($fieldArray['type'] == 'time'){
+                        $form->add($key, TimeType::class,['widget' => 'single_text']);
+                    } elseif ($fieldArray['type'] == 'date'){
+                        $form->add($key, DateType::class,['widget' => 'single_text']);
+                    } elseif ($fieldArray['type'] == 'datetime'){
+                        $form->add($key, DateTimeType::class,['widget' => 'single_text']);
+                    }else{
+                        $form->add($key);
+                    }
+                }else{
+                    $form->add($key);
+                }
+            }
 
             /*Submit $data that was unpacked from the $response into the $form.*/
             $form->submit($data);
