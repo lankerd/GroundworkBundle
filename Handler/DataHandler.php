@@ -1,8 +1,8 @@
 <?php
+declare(strict_types=1);
 
-    namespace Lankerd\GroundworkBundle\Handler;
+namespace Lankerd\GroundworkBundle\Handler;
 
-    use App\Entity\User;
     use DomainException;
     use Exception;
     use Lankerd\GroundworkBundle\Helper\DataHelperInterface;
