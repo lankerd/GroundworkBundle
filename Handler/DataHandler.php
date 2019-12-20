@@ -299,7 +299,6 @@
 
             /*Unpack and decode data from $request in order to obtain form information.*/
             $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
-            $oldData = $data;
 
             /*Instantiate a new User object for us to insert the $request form data into.*/
             $entity = $dataHelper->getEntity();
@@ -352,7 +351,7 @@
             $class = $this->queryHelper->getClassMetadata(get_class($entity));
             $form = $this->formFactory->create('Symfony\Component\Form\Extension\Core\Type\FormType', $entity, ['csrf_protection' => false]);
 
-            foreach($oldData as $key => $value) {
+            foreach($data as $key => $value) {
                 if(!$class->hasAssociation($key)){
                     $fieldArray = $class->getFieldMapping($key);
                     if($fieldArray['type'] == 'time'){
@@ -404,7 +403,6 @@
             $this->setClass($key);
 
             $parentKey = $key;
-            $oldData = $data;
 
             $entity = $dataHelper->getEntity();
 
@@ -451,7 +449,7 @@
             $class = $this->queryHelper->getClassMetadata(get_class($entity));
             $form = $this->formFactory->create('Symfony\Component\Form\Extension\Core\Type\FormType', $entity, ['csrf_protection' => false]);
 
-            foreach($oldData as $key => $value) {
+            foreach($data as $key => $value) {
                 if(!$class->hasAssociation($key)){
                     $fieldArray = $class->getFieldMapping($key);
                     if($fieldArray['type'] == 'time'){
