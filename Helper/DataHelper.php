@@ -145,12 +145,12 @@ class DataHelper implements DataHelperInterface
      * and return an array of the properties with their
      * associated methods that can be accessed to sort through.
      *
-     * @param object $object
+     * @param mixed $object
      *
      * @return array
      * @throws \ReflectionException
      */
-    public function getObjectProperties(object $object) : array
+    public function getObjectProperties($object) : array
     {
         /**
          * Initialize objectProperties array in

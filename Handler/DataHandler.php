@@ -10,6 +10,7 @@ use Lankerd\GroundworkBundle\Helper\QueryHelper;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Form\FormFactoryInterface;
+use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
 
 /**
@@ -49,6 +50,11 @@ class DataHandler
      * @var array
      */
     protected $globalIdentifiers;
+
+    /**
+     * @var array
+     */
+    protected $response;
 
     /**
      * DataHandler constructor.
@@ -93,19 +99,156 @@ class DataHandler
     public function indexActions(array $data)
     {
         foreach ($data['actions'] as $action => $entities) {
-            if ($action === "create"){
-                $this->create($entities);
+            $dataHelper = $this->dataHelper;
+            $queryHelper = $this->queryHelper;
+
+            foreach ($entities as $entityName => $entityCollection) {
+                $fullEntityNamespace = $dataHelper::ENTITY_NAMESPACE.ucfirst($entityName);
+                foreach ($entityCollection as $entityUniqueIdentifier => $entityFields) {
+                    /**
+                     * GET
+                     */
+                    if($action === 'get'){
+                        $data = $this->queryHelper->getEntityRepository($fullEntityNamespace)->findBy($entityFields);
+                        $this->globalIdentifiers[$entityName][$entityUniqueIdentifier] = $data;
+                    }
+                    /**
+                     * CREATE
+                     */
+                    if ($action === 'create') {
+                        $entityProperties = $dataHelper->getObjectProperties($fullEntityNamespace);
+                        $entity = new $fullEntityNamespace();
+                        $entityMetadata = $this->queryHelper->getClassMetadata($fullEntityNamespace);
+                        $associations = $entityMetadata->getAssociationNames();
+//                        foreach ($entityFields as $fieldName => $fieldValue) {
+//
+//                            if (array_key_exists(ucfirst($fieldName), $entityProperties)) {
+//                                /*This will loop through all of the entityMethods*/
+//                                foreach ($entityProperties[ucfirst($fieldName)] as $method) {
+//                                    if (false !== stripos($method, 'set')) {
+//
+//                                    }
+////                                    if (DateTime::createFromFormat('Y-m-d H:i:s', $myString) !== FALSE) {
+////                                        // it's a date
+////                                    }
+//                                    if (false !== stripos($method, 'add')) {
+//                                        $entity->$method($fieldValue);
+//                                    }
+//                                }
+//                            }
+//                        }
+
+                        /*Create form with corresponding Entity paired to it*/
+                        $form = $this->formFactory->create('App\\Form\\'.ucfirst($entityName).'Type', $entity);
+//                        foreach ($associations as $association) {
+//                            $form->remove($association);
+//                        }
+                        /*Submit $data that was unpacked from the $response into the $form.*/
+                        $form->submit($entityFields);
+
+                        /*Check if the current $form has been submitted, and is valid.*/
+                        if ($form->isSubmitted() && $form->isValid()) {
+                            $this->globalIdentifiers[$entityName][$entityUniqueIdentifier] = $entity;
+                            $this->queryHelper->persistEntity($entity);
+                        }else{
+                            throw new RuntimeException($form->getErrors()->current()->getMessage());
+                        }
+
+                        //$this->queryHelper->persistEntity($entity);
+                    }
+
+                    /**
+                     * CONNECT
+                     */
+                    if ($action === 'connect') {
+                        $entityProperties = $dataHelper->getObjectProperties($fullEntityNamespace);
+                        $entity = $this->globalIdentifiers[$entityName][$entityUniqueIdentifier];
+                        //entityName is the parent that will have stuff connected to it
+//                        dump($entityName, $entityCollection);
+//                        die;
+                        foreach ($entityFields as $fieldName => $fieldValue) {
+                            if (array_key_exists($fieldName, $this->globalIdentifiers)) {
+                                /*This will loop through all of the entityMethods*/
+                                foreach ($entityProperties[ucfirst($fieldName)] as $method) {
+                                    if (false !== stripos($method, 'set')) {
+                                        foreach ($fieldValue as $value) {
+                                            $entity->$method($this->globalIdentifiers[$fieldName][$value]);
+                                        }
+                                    }
+                                    if (false !== stripos($method, 'add')) {
+                                        foreach ($fieldValue as $value) {
+                                            $entity->$method($this->globalIdentifiers[$fieldName][$value]);
+                                        }
+                                    }
+                                }
+                            }else{
+                                throw new RuntimeException($fieldName.' is not a valid globalIdentifier, try looking at your request and ensure');
+                            }
+                        }
+                        $this->queryHelper->persistEntity($entity);
+                    }
+
+                    /**
+                     * OUTPUT
+                     */
+                    if($action === 'output'){
+                        $serializedData = $this->serializer->normalize($this->globalIdentifiers[$entityName][$entityFields], 'json');
+                        dump($serializedData);
+                        die;
+                        $this->response[$entityFields] = $serializedData;
+                    }
+
+                    /**
+                     * LOAD ORDER
+                     */
+                    if ($action === 'loadOrder'){
+                        if (!array_key_exists($entityFields, $this->globalIdentifiers[$entityName])) {
+                            throw new RuntimeException($entityFields.': is not a valid globalIdentifier, try looking at your request and fix the .');
+                        }
+                        $this->queryHelper->persistEntity($this->globalIdentifiers[$entityName][$entityFields], true);
+                    }
+                }
             }
         }
+
+        $response = $this->serializer->serialize(
+            $this->response,
+            'json'
+        );
+        dump($response);
+        die;
     }
 
-    public function create(array $entities)
+    public function create(string $fullEntityNamespace, array $entities): void
     {
-        foreach ($entities as $entityName => $entityInformation) {
-            dump($entityName, $entityInformation);
-            die;
+        $entity = new $fullEntityNamespace();
 
-        }
+//        $dataHelper = $this->dataHelper;
+//        $queryHelper = $this->queryHelper;
+//
+//        foreach ($entities as $entityName => $entityCollection) {
+//            $fullEntityNamespace = $dataHelper::ENTITY_NAMESPACE.$entityName;
+//            $entityProperties = $dataHelper->getObjectProperties($fullEntityNamespace);
+//            foreach ($entityCollection as $entityUniqueIdentifier => $entityFields) {
+//                $entity = new $fullEntityNamespace();
+//                foreach ($entityFields as $fieldName => $fieldValue) {
+//                    if (array_key_exists(ucfirst($fieldName), $entityProperties)){
+//                        /*This will loop through all of the entityMethods*/
+//                        foreach ($entityProperties[ucfirst($fieldName)] as $method) {
+//                            if (false !== stripos($method, 'set')) {
+//                                $entity->$method($fieldValue);
+//                            }
+//                            if (false !== stripos($method, 'add')) {
+//                                $entity->$method($fieldValue);
+//                            }
+//                        }
+//                    }
+//                }
+//                $this->globalIdentifiers[$entityName][$entityUniqueIdentifier] = $entity;
+//            }
+//        }
+//        dump($this->globalIdentifiers);
+//        die;
     }
 
 
@@ -295,7 +438,6 @@ class DataHandler
                 if (false !== stripos($objectMethod, 'add')) {
                     $bindingMethod = $objectMethod;
                 }
-                dump($objectMethod);
 
                 if (false !== stripos($objectMethod, 'set')) {
                     $bindingMethod = $objectMethod;

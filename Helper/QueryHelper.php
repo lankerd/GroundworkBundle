@@ -44,7 +44,7 @@ class QueryHelper
      *
      * @return void
      */
-    public function persistEntity(object $entity): void
+    public function persistEntity(object $entity, bool $flush = false): void
     {
         $entityManager = $this->entityManager;
 
@@ -61,14 +61,16 @@ class QueryHelper
              * available for doctrine to submit to the Database.
              */
             $entityManager->persist($entity);
-            /**
-             * Using Flush() causes write operations against the
-             * database to be executed. Which means if you
-             * used Persist($object) before flushing,
-             * You'll end up inserting a new record
-             * into the Database.
-             */
-            $entityManager->flush();
+            if ($flush){
+                /**
+                 * Using Flush() causes write operations against the
+                 * database to be executed. Which means if you
+                 * used Persist($object) before flushing,
+                 * You'll end up inserting a new record
+                 * into the Database.
+                 */
+                $entityManager->flush();
+            }
         } catch (Exception $e) {
             /**
              * Throw a new exception to inform sender of the error.
@@ -106,5 +108,18 @@ class QueryHelper
             throw $e;
         }
         return $entityRepository;
+    }
+
+    /**
+     * @param string $entityPath
+     *
+     * @return object
+     */
+    public function getClassMetadata(string $entityPath){
+        $entityManager = $this->entityManager;
+        /**
+         * this method return a class metadata object of given entity path
+         */
+        return $entityManager->getClassMetadata($entityPath);
     }
 }
