@@ -5,6 +5,7 @@ namespace Lankerd\GroundworkBundle\Handler;
 
 use DomainException;
 use Exception;
+use JMS\Serializer\SerializationContext;
 use Lankerd\GroundworkBundle\Helper\DataHelperInterface;
 use Lankerd\GroundworkBundle\Helper\QueryHelper;
 use RuntimeException;
@@ -67,7 +68,7 @@ class DataHandler
     public function __construct(
         DataHelperInterface $dataHelper,
         FormFactoryInterface $formFactory,
-        Serializer $serializer,
+        \JMS\Serializer\Serializer $serializer,
         QueryHelper $queryHelper
     ) {
         $this->dataHelper = $dataHelper;
@@ -192,7 +193,7 @@ class DataHandler
                      * OUTPUT
                      */
                     if($action === 'output'){
-                        $serializedData = $this->serializer->normalize($this->globalIdentifiers[$entityName][$entityFields], 'json');
+                        $serializedData = $this->serializer->serialize($this->globalIdentifiers[$entityName][$entityFields], 'json', SerializationContext::create()->enableMaxDepthChecks());
                         dump($serializedData);
                         die;
                         $this->response[$entityFields] = $serializedData;
