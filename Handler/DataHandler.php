@@ -5,7 +5,6 @@ namespace Lankerd\GroundworkBundle\Handler;
 
 use DomainException;
 use Exception;
-use JMS\Serializer\SerializationContext;
 use Lankerd\GroundworkBundle\Helper\DataHelperInterface;
 use Lankerd\GroundworkBundle\Helper\QueryHelper;
 use RuntimeException;
@@ -13,6 +12,10 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
+use Symfony\Component\Serializer\Encoder\JsonEncoder;
+
 
 /**
  * Class DataHandler
@@ -68,7 +71,7 @@ class DataHandler
     public function __construct(
         DataHelperInterface $dataHelper,
         FormFactoryInterface $formFactory,
-        \JMS\Serializer\Serializer $serializer,
+        Serializer $serializer,
         QueryHelper $queryHelper
     ) {
         $this->dataHelper = $dataHelper;
@@ -89,6 +92,33 @@ class DataHandler
         $data = $this->getRequestData();
         /*Store the request data into a property for re-usability purposes*/
         $this->indexActions($data);
+
+//        $encoder = new JsonEncoder();
+//        $defaultContext = [
+//            AbstractNormalizer::CIRCULAR_REFERENCE_HANDLER => function ($object, $format, $context) {
+//                return $object->getId();
+//            },
+//        ];
+//        $normalizer = new ObjectNormalizer(null, null, null, null, null, null, $defaultContext);
+//
+//        $serializer = new Serializer([$normalizer], [$encoder]);
+
+
+
+//        $encoders = [new JsonEncoder()];
+//        $normalizers = [new ObjectNormalizer()];
+//
+//        $serializer = new Serializer($normalizers, $encoders);
+//
+//        $data = $serializer->normalize($this->response, 'json', [AbstractNormalizer::ATTRIBUTES => ['familyName', 'company' => ['name']]]);
+
+//        $jsonObject = $this->serializer->serialize($this->response, 'json', [
+//            'circular_reference_handler' => function ($object) {
+//                return $object->getId();
+//            }
+//        ]);
+
+        return $this->response;
     }
 
     /**
@@ -105,22 +135,21 @@ class DataHandler
 
             foreach ($entities as $entityName => $entityCollection) {
                 $fullEntityNamespace = $dataHelper::ENTITY_NAMESPACE.ucfirst($entityName);
+                $entityProperties = $dataHelper->getObjectProperties($fullEntityNamespace);
                 foreach ($entityCollection as $entityUniqueIdentifier => $entityFields) {
                     /**
                      * GET
                      */
                     if($action === 'get'){
                         $data = $this->queryHelper->getEntityRepository($fullEntityNamespace)->findBy($entityFields);
-                        $this->globalIdentifiers[$entityName][$entityUniqueIdentifier] = $data;
+                        $this->globalIdentifiers[$entityUniqueIdentifier] = $data;
                     }
                     /**
                      * CREATE
                      */
                     if ($action === 'create') {
-                        $entityProperties = $dataHelper->getObjectProperties($fullEntityNamespace);
                         $entity = new $fullEntityNamespace();
-                        $entityMetadata = $this->queryHelper->getClassMetadata($fullEntityNamespace);
-                        $associations = $entityMetadata->getAssociationNames();
+//                        $associations = $entityMetadata->getAssociationNames();
 //                        foreach ($entityFields as $fieldName => $fieldValue) {
 //
 //                            if (array_key_exists(ucfirst($fieldName), $entityProperties)) {
@@ -149,36 +178,31 @@ class DataHandler
 
                         /*Check if the current $form has been submitted, and is valid.*/
                         if ($form->isSubmitted() && $form->isValid()) {
-                            $this->globalIdentifiers[$entityName][$entityUniqueIdentifier] = $entity;
+                            $this->globalIdentifiers[$entityUniqueIdentifier] = $entity;
                             $this->queryHelper->persistEntity($entity);
                         }else{
                             throw new RuntimeException($form->getErrors()->current()->getMessage());
                         }
 
-                        //$this->queryHelper->persistEntity($entity);
+                        $this->queryHelper->persistEntity($entity);
                     }
 
                     /**
                      * CONNECT
                      */
                     if ($action === 'connect') {
-                        $entityProperties = $dataHelper->getObjectProperties($fullEntityNamespace);
-                        $entity = $this->globalIdentifiers[$entityName][$entityUniqueIdentifier];
-                        //entityName is the parent that will have stuff connected to it
-//                        dump($entityName, $entityCollection);
-//                        die;
+                        $entityMetadata = $this->queryHelper->getClassMetadata($fullEntityNamespace);
+                        $entity = $this->globalIdentifiers[$entityUniqueIdentifier];
                         foreach ($entityFields as $fieldName => $fieldValue) {
-                            if (array_key_exists($fieldName, $this->globalIdentifiers)) {
+                            if ($entityMetadata->hasAssociation($fieldName)) {
                                 /*This will loop through all of the entityMethods*/
-                                foreach ($entityProperties[ucfirst($fieldName)] as $method) {
-                                    if (false !== stripos($method, 'set')) {
-                                        foreach ($fieldValue as $value) {
-                                            $entity->$method($this->globalIdentifiers[$fieldName][$value]);
+                                foreach ($entityProperties[$fieldName] as $method) {
+                                    foreach ($fieldValue as $value) {
+                                        if (false !== stripos($method, 'set')) {
+                                            $entity->$method($this->globalIdentifiers[$value]);
                                         }
-                                    }
-                                    if (false !== stripos($method, 'add')) {
-                                        foreach ($fieldValue as $value) {
-                                            $entity->$method($this->globalIdentifiers[$fieldName][$value]);
+                                        if (false !== stripos($method, 'add')) {
+                                            $entity->$method($this->globalIdentifiers[$value]);
                                         }
                                     }
                                 }
@@ -187,37 +211,36 @@ class DataHandler
                             }
                         }
                         $this->queryHelper->persistEntity($entity);
-                    }
-
-                    /**
-                     * OUTPUT
-                     */
-                    if($action === 'output'){
-                        $serializedData = $this->serializer->serialize($this->globalIdentifiers[$entityName][$entityFields], 'json', SerializationContext::create()->enableMaxDepthChecks());
-                        dump($serializedData);
-                        die;
-                        $this->response[$entityFields] = $serializedData;
+                        $this->globalIdentifiers[$entityUniqueIdentifier] = $entity;
                     }
 
                     /**
                      * LOAD ORDER
                      */
                     if ($action === 'loadOrder'){
-                        if (!array_key_exists($entityFields, $this->globalIdentifiers[$entityName])) {
+                        if (!array_key_exists($entityFields, $this->globalIdentifiers)) {
                             throw new RuntimeException($entityFields.': is not a valid globalIdentifier, try looking at your request and fix the .');
                         }
-                        $this->queryHelper->persistEntity($this->globalIdentifiers[$entityName][$entityFields], true);
+                        //$this->queryHelper->persistEntity($this->globalIdentifiers[$entityName][$entityFields], true);
+                    }
+
+                    /**
+                     * OUTPUT
+                     */
+                    if($action === 'output'){
+
+                        dump($entityUniqueIdentifier, $entityFields);
+                        die;
+//                        $jsonObject = $this->serializer->serialize($this->globalIdentifiers[$entityName][$entityFields], 'json', [
+//                            'circular_reference_handler' => function ($object) {
+//                                return $object->getId();
+//                            }
+//                        ]);
+                        $this->response[$entityFields] = $jsonObject;
                     }
                 }
             }
         }
-
-        $response = $this->serializer->serialize(
-            $this->response,
-            'json'
-        );
-        dump($response);
-        die;
     }
 
     public function create(string $fullEntityNamespace, array $entities): void

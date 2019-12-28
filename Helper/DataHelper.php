@@ -87,6 +87,18 @@ class DataHelper implements DataHelperInterface
     }
 
     /**
+     * Will provide a pluralized string
+     *
+     * @param string $word
+     *
+     * @return string
+     */
+    public function pluralize(string $word): string
+    {
+        return Inflector::pluralize($word);
+    }
+
+    /**
      * Checks a string for a given phrase at the exact end of a string.
      * This was explicitly designed with looking at Getters and Setters
      * in an entity.
@@ -203,7 +215,7 @@ class DataHelper implements DataHelperInterface
              * as we fill the array with the value that
              * has been provided!
              */
-            $objectProperties[$singularizedPropertyName] = $methodNames;
+            $objectProperties[$propertyName] = $methodNames;
         }
 
         /**
