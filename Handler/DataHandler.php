@@ -131,7 +131,7 @@ class DataHandler
              */
             if ($action === 'loadOrder'){
                 foreach ($entities as $entity) {
-                    $this->queryHelper->persistEntity($this->globalIdentifiers[$entity], true);
+                    $this->queryHelper->persistEntity($this->globalIdentifiers[$entity]);
                 }
                 continue;
             }
@@ -210,7 +210,7 @@ class DataHandler
                                 throw new RuntimeException($fieldName.' is not a valid globalIdentifier, try looking at your request and ensure');
                             }
                         }
-                        $this->queryHelper->persistEntity($entity);
+                        $this->queryHelper->persistEntity($entity, false);
                         $this->globalIdentifiers[$entityUniqueIdentifier] = $entity;
                     }
 
@@ -243,7 +243,6 @@ class DataHandler
     {
         return $this->requestData;
     }
-
 
     /**
      * Check to see if the specified class exists
@@ -424,6 +423,8 @@ class DataHandler
         $queryHelper->persistEntity($primaryEntity);
     }
 
+    // Merge Create and Create Child Record into a recursive call. No need to have them seperated - this is mainly being used to create a user and any records associated with it.
+    // TODO: Rewrite CreateRecord and associated functions.
     public function createRecord(Request $request)
     {
         $queryHelper = $this->queryHelper;
