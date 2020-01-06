@@ -44,7 +44,7 @@ class QueryHelper
      *
      * @return void
      */
-    public function persistEntity(object $entity, bool $flush = false): void
+    public function persistEntity(object $entity, bool $flush = true): void
     {
         $entityManager = $this->entityManager;
 
