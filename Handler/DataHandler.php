@@ -174,7 +174,7 @@ class DataHandler
 //                        }
 
                         /*Create form with corresponding Entity paired to it*/
-                        $form = $this->formFactory->create('App\\Form\\'.$entityName.'Type', $entity);
+                        $form = $this->dynamicForm($entity, $data);
 //                        foreach ($associations as $association) {
 //                            $form->remove($association);
 //                        }
@@ -471,24 +471,7 @@ class DataHandler
             }
         }
         /*Create form with corresponding Entity paired to it*/
-        $class = $this->queryHelper->getClassMetadata(get_class($entity));
-        $form = $this->formFactory->create('Symfony\Component\Form\Extension\Core\Type\FormType', $entity, ['csrf_protection' => false]);
-        foreach($data as $key => $value) {
-            if(!$class->hasAssociation($key)){
-                $fieldArray = $class->getFieldMapping($key);
-                if($fieldArray['type'] == 'time'){
-                    $form->add($key, TimeType::class,['widget' => 'single_text']);
-                } elseif ($fieldArray['type'] == 'date'){
-                    $form->add($key, DateType::class,['widget' => 'single_text']);
-                } elseif ($fieldArray['type'] == 'datetime'){
-                    $form->add($key, DateTimeType::class,['widget' => 'single_text']);
-                }else{
-                    $form->add($key);
-                }
-            }else{
-                $form->add($key);
-            }
-        }
+        $form = $this->dynamicForm($entity, $data);
         /*Submit $data that was unpacked from the $response into the $form.*/
         $form->submit($data);
         /*Check if the current $form has been submitted, and is valid.*/
@@ -509,7 +492,7 @@ class DataHandler
         }
         return false;
     }
-    private function createChildRecord($key, $data, $parentClassName = null) {
+    private function createChildRecord($key, $data, $parentClassName = '') {
         $queryHelper = $this->queryHelper;
         $dataHelper = $this->dataHelper;
         $this->setClass($key);
@@ -549,6 +532,23 @@ class DataHandler
                 unset($data[$key]);
             }
         }
+
+        /*Submit $data that was unpacked from the $response into the $form.*/
+        $form = $this->dynamicForm($entity, $data);
+        $form->submit($data);
+        /*Check if the current $form has been submitted, and is valid.*/
+        if ($form->isSubmitted() && $form->isValid()) {
+            $this->queryHelper->persistEntity($entity);
+            $response = $entity->getId();
+            if (!empty($parentClassName)) {
+                $this->setClass($parentClassName);
+            }
+            return $response;
+        }
+    }
+
+    public function dynamicForm($entity, $data)
+    {
         /*Create form with corresponding Entity paired to it*/
         $class = $this->queryHelper->getClassMetadata(get_class($entity));
         $form = $this->formFactory->create('Symfony\Component\Form\Extension\Core\Type\FormType', $entity, ['csrf_protection' => false]);
@@ -568,16 +568,7 @@ class DataHandler
                 $form->add($key);
             }
         }
-        /*Submit $data that was unpacked from the $response into the $form.*/
-        $form->submit($data);
-        /*Check if the current $form has been submitted, and is valid.*/
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->queryHelper->persistEntity($entity);
-            $response = $entity->getId();
-            if ($parentClassName != null) {
-                $this->setClass($parentClassName);
-            }
-            return $response;
-        }
+
+        return $form;
     }
 }
