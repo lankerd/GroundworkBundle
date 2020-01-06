@@ -10,11 +10,7 @@ use Lankerd\GroundworkBundle\Helper\QueryHelper;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Form\FormFactoryInterface;
-use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
-use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
-use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
-use Symfony\Component\Serializer\Encoder\JsonEncoder;
 use Symfony\Component\Inflector\Inflector;
 use Symfony\Component\Form\Extension\Core\Type\TimeType;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
@@ -85,7 +81,8 @@ class DataHandler
 
 
     /**
-     * @param \Symfony\Component\HttpFoundation\Request $request
+     * @param Request $request
+     * @return array
      */
     public function requestHandler(Request $request)
     {
@@ -232,7 +229,7 @@ class DataHandler
     }
 
     /**
-     * @param \Symfony\Component\HttpFoundation\Request $request
+     * @param Request $request
      */
     public function setRequestData(Request $request): void
     {
@@ -326,7 +323,7 @@ class DataHandler
     }
 
     /**
-     * @param \Symfony\Component\HttpFoundation\Request $request
+     * @param Request $request
      *
      * @throws Exception
      */
