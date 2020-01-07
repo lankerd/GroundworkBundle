@@ -29,7 +29,8 @@
 		"symfony/form": "^4.3",
 		"doctrine/inflector": "^1.0",
 		"ext-json": "*",
-        "jms/serializer-bundle": "^3.5@dev"
+        "jms/serializer-bundle": "^3.5@dev",
+        "symfony/stopwatch": "^5.1@dev"
 	},
 	"minimum-stability": "dev"
 }

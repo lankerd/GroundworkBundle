@@ -10,6 +10,9 @@ use Lankerd\GroundworkBundle\Helper\QueryHelper;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Form\FormFactoryInterface;
+use Symfony\Component\Serializer\Encoder\JsonEncoder;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
 use Symfony\Component\Inflector\Inflector;
 use Symfony\Component\Form\Extension\Core\Type\TimeType;
@@ -129,12 +132,13 @@ class DataHandler
             /**
              * LOAD ORDER
              */
-            if ($action === 'loadOrder'){
+            if ($action === 'loadOrder') {
                 foreach ($entities as $entity) {
                     $this->queryHelper->persistEntity($this->globalIdentifiers[$entity]);
                 }
                 continue;
             }
+
             foreach ($entities as $entityName => $entityCollection) {
                 $fullEntityNamespace = $dataHelper::ENTITY_NAMESPACE.$entityName;
                 $entityProperties = $dataHelper->getObjectProperties($fullEntityNamespace);
@@ -146,42 +150,21 @@ class DataHandler
                     if($action === 'get'){
                         $this->globalIdentifiers[$entityUniqueIdentifier] = $this->queryHelper->getEntityRepository($fullEntityNamespace)->findBy($entityFields);
                     }
+
                     /**
                      * CREATE
                      */
                     if ($action === 'create') {
                         $entity = new $fullEntityNamespace();
-//                        $associations = $entityMetadata->getAssociationNames();
-//                        foreach ($entityFields as $fieldName => $fieldValue) {
-//
-//                            if (array_key_exists(ucfirst($fieldName), $entityProperties)) {
-//                                /*This will loop through all of the entityMethods*/
-//                                foreach ($entityProperties[ucfirst($fieldName)] as $method) {
-//                                    if (false !== stripos($method, 'set')) {
-//
-//                                    }
-////                                    if (DateTime::createFromFormat('Y-m-d H:i:s', $myString) !== FALSE) {
-////                                        // it's a date
-////                                    }
-//                                    if (false !== stripos($method, 'add')) {
-//                                        $entity->$method($fieldValue);
-//                                    }
-//                                }
-//                            }
-//                        }
-
-                        /*Create form with corresponding Entity paired to it*/
                         $form = $this->dynamicForm($entity, $entityFields);
-//                        foreach ($associations as $association) {
-//                            $form->remove($association);
-//                        }
-                        /*Submit $data that was unpacked from the $response into the $form.*/
                         $form->submit($entityFields);
 
                         /*Check if the current $form has been submitted, and is valid.*/
                         if ($form->isSubmitted() && $form->isValid()) {
                             $this->globalIdentifiers[$entityUniqueIdentifier] = $entity;
                             $this->queryHelper->persistEntity($entity);
+                            $this->response['code'] = 200;
+                            $this->response['message'] = $entityName . ' Created';
                         }else{
                             throw new RuntimeException($form->getErrors()->current()->getMessage());
                         }
@@ -217,16 +200,41 @@ class DataHandler
                     /**
                      * OUTPUT
                      */
-                    if($action === 'output'){
-                        foreach ($data['actions']['output'] as $key => $output) {
-                            $outputEntity = $dataHelper::ENTITY_NAMESPACE.ucfirst($key);
-                            $entityResults = [];
-                            foreach($output['get'] as $key => $item) {
-                                $getter = 'get' . $item;
-                                // TODO: Fix circular reference issue. @axel
-                                $entityResults[] = $this->queryHelper->getEntityRepository($outputEntity)->findOneBy(['id' => $output['id'] ])->$getter()->toArray();
+                    if ($action === 'response') {
+                        $entityResults = [];
+                        foreach($data['actions']['response'] as $outputEntity => $request) {
+                            foreach($request as $key => $items) {
+                                if( $key === 'getter'){
+                                    if(!$items['get']) continue;
+                                    $entityResults[$items['get']] = $this->getter($dataHelper::ENTITY_NAMESPACE.$outputEntity, $items);
+                                }
+
+                                // find($id, $lockMode = null, $lockVersion = null)
+                                if( $key === 'find'){
+                                    if(!$items['id']) continue;
+                                    $entityResults[$items['get']] = $this->find($dataHelper::ENTITY_NAMESPACE.$outputEntity, $items);
+                                }
+
+                                // findOneBy(array $criteria, array $orderBy = null)
+                                if($key === 'findOneBy') {
+                                    if(!$items['criteria']) continue;
+                                    $entityResults[$items['get']] = $this->findOneBy($dataHelper::ENTITY_NAMESPACE.$outputEntity, $items);
+                                }
+
+                                // findAll()
+                                if($key === 'findAll') {
+                                    if(!$items['get']) continue;
+                                    $entityResults[$items['get']] = $this->findAll($dataHelper::ENTITY_NAMESPACE.$outputEntity, $items);
+                                }
+
+                                // findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
+                                if($key === 'findBy') {
+                                    if(!$items['criteria']) continue;
+                                    $entityResults[$items['get']] = $this->findBy($dataHelper::ENTITY_NAMESPACE.$outputEntity, $items);
+                                }
                             }
                         }
+
                         $this->response['data'] = $entityResults;
                     }
                 }
@@ -234,8 +242,113 @@ class DataHandler
         }
     }
 
-    public function toArray($object){
+    public function getter( $outputEntity, $items )
+    {
+        $getter = '';
+        $criteria = [];
+        $excludes = [];
+
+        if($items['excludes']) {
+            $excludes = $items['excludes'];
+            unset($items['excludes']);
+        }
+
+        foreach($items as $key => $item) {
+            if ($key === 'get') {
+                $getter = 'get' . $item;
+            } else {
+                $criteria = [$key => $item];
+            }
+        }
+
+        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findOneBy($criteria)->$getter(), $excludes);
+    }
+
+    public function find( $outputEntity, $items )
+    {
+        $excludes = [];
+
+        if($items['excludes']) {
+            $excludes = $items['excludes'];
+            unset($items['excludes']);
+        }
+
+        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->find($items['id']), $excludes);
+    }
+
+    public function findOneBy( $outputEntity, $items )
+    {
+        $excludes = [];
+
+        if($items['excludes']) {
+            $excludes = $items['excludes'];
+            unset($items['excludes']);
+        }
+
+        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findOneBy($items['criteria']), $excludes);
+    }
+
+    public function findAll( $outputEntity, $items )
+    {
+        $excludes = [];
+
+        if($items['excludes']) {
+            $excludes = $items['excludes'];
+            unset($items['excludes']);
+        }
+
+        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findAll(), $excludes);
+    }
+
+    public function findBy( $outputEntity, $items )
+    {
+        $excludes = [];
+
+        if($items['excludes']) {
+            $excludes = $items['excludes'];
+            unset($items['excludes']);
+        }
+
+        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findBy($items['criteria']), $excludes);
+    }
+
+    public function toArray($object)
+    {
         return json_decode($this->serializer->serialize($object,'json'),true);
+    }
+
+    public function serializeFix( $object, $excludes = [] )
+    {
+        $normalizer = new ObjectNormalizer();
+        $encoder = new JsonEncoder();
+
+        $serializer = new Serializer([$normalizer], [$encoder]);
+        return json_decode($serializer->serialize($object, 'json', [AbstractNormalizer::IGNORED_ATTRIBUTES => $excludes]), true);
+    }
+
+    public function dynamicForm( $entity, $data )
+    {
+        /*Create form with corresponding Entity paired to it*/
+        $class = $this->queryHelper->getClassMetadata(get_class($entity));
+        $form = $this->formFactory->create('Symfony\Component\Form\Extension\Core\Type\FormType', $entity, ['csrf_protection' => false]);
+        foreach($data as $key => $value) {
+            if(!$class->hasAssociation($key)){
+                $fieldArray = $class->getFieldMapping($key);
+                if($fieldArray['type'] == 'time'){
+                    $form->add($key, TimeType::class,['widget' => 'single_text']);
+                } elseif ($fieldArray['type'] == 'date'){
+                    $form->add($key, DateType::class,['widget' => 'single_text']);
+                } elseif ($fieldArray['type'] == 'datetime'){
+                    $form->add($key, DateTimeType::class,['widget' => 'single_text']);
+                }else{
+                    $form->add($key);
+                }
+            }else{
+                $form->add($key);
+            }
+        }
+
+        return $form;
     }
 
     /**
@@ -266,6 +379,9 @@ class DataHandler
         $this->dataHelper->setClassName($class);
     }
 
+
+
+    // Will deprecate code below this line
     /**
      * THIS NEEDS TO BE REWRITTEN WHEN I AM MORE CONSCIOUS. TOO TIRED TO WRITE GOOD CODE.
      *
@@ -553,30 +669,5 @@ class DataHandler
             }
             return $response;
         }
-    }
-
-    public function dynamicForm($entity, $data)
-    {
-        /*Create form with corresponding Entity paired to it*/
-        $class = $this->queryHelper->getClassMetadata(get_class($entity));
-        $form = $this->formFactory->create('Symfony\Component\Form\Extension\Core\Type\FormType', $entity, ['csrf_protection' => false]);
-        foreach($data as $key => $value) {
-            if(!$class->hasAssociation($key)){
-                $fieldArray = $class->getFieldMapping($key);
-                if($fieldArray['type'] == 'time'){
-                    $form->add($key, TimeType::class,['widget' => 'single_text']);
-                } elseif ($fieldArray['type'] == 'date'){
-                    $form->add($key, DateType::class,['widget' => 'single_text']);
-                } elseif ($fieldArray['type'] == 'datetime'){
-                    $form->add($key, DateTimeType::class,['widget' => 'single_text']);
-                }else{
-                    $form->add($key);
-                }
-            }else{
-                $form->add($key);
-            }
-        }
-
-        return $form;
     }
 }
