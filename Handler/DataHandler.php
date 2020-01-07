@@ -18,6 +18,7 @@ use Symfony\Component\Inflector\Inflector;
 use Symfony\Component\Form\Extension\Core\Type\TimeType;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
+use Symfony\Component\Stopwatch\Stopwatch;
 
 /**
  * Class DataHandler
@@ -89,6 +90,9 @@ class DataHandler
      */
     public function requestHandler(Request $request)
     {
+        $stopwatch = new Stopwatch();
+        $stopwatch->start('transaction');
+
         /*Store the request data into a property for re-usability purposes*/
         $this->setRequestData($request);
         /*Access the formatted request data, and store it in a variable for later*/
@@ -96,24 +100,7 @@ class DataHandler
         /*Store the request data into a property for re-usability purposes*/
         $this->indexActions($data);
 
-//        $encoder = new JsonEncoder();
-//        $defaultContext = [
-//            AbstractNormalizer::CIRCULAR_REFERENCE_HANDLER => function ($object, $format, $context) {
-//                return $object->getId();
-//            },
-//        ];
-//        $normalizer = new ObjectNormalizer(null, null, null, null, null, null, $defaultContext);
-//
-//        $serializer = new Serializer([$normalizer], [$encoder]);
-
-
-
-//        $encoders = [new JsonEncoder()];
-//        $normalizers = [new ObjectNormalizer()];
-//
-//        $serializer = new Serializer($normalizers, $encoders);
-//
-//        $data = $serializer->normalize($this->response, 'json', [AbstractNormalizer::ATTRIBUTES => ['familyName', 'company' => ['name']]]);
+        $this->response['responseTime'] = $stopwatch->stop('transaction');
         return $this->response;
     }
 
