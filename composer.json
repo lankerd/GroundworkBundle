@@ -30,7 +30,7 @@
 		"doctrine/inflector": "^1.0",
 		"ext-json": "*",
         "jms/serializer-bundle": "^3.5@dev",
-        "symfony/stopwatch": "^4.4"
+        "symfony/stopwatch": "*"
 	},
 	"minimum-stability": "dev"
 }
