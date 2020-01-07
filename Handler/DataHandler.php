@@ -135,10 +135,10 @@ class DataHandler
                 }
                 continue;
             }
-
             foreach ($entities as $entityName => $entityCollection) {
                 $fullEntityNamespace = $dataHelper::ENTITY_NAMESPACE.$entityName;
                 $entityProperties = $dataHelper->getObjectProperties($fullEntityNamespace);
+
                 foreach ($entityCollection as $entityUniqueIdentifier => $entityFields) {
                     /**
                      * GET
@@ -171,7 +171,7 @@ class DataHandler
 //                        }
 
                         /*Create form with corresponding Entity paired to it*/
-                        $form = $this->dynamicForm($entity, $data);
+                        $form = $this->dynamicForm($entity, $entityFields);
 //                        foreach ($associations as $association) {
 //                            $form->remove($association);
 //                        }
@@ -218,14 +218,24 @@ class DataHandler
                      * OUTPUT
                      */
                     if($action === 'output'){
-                        foreach ($entityFields as $entityField) {
-                            $getter = 'get'.$entityField;
-                            $this->response[$entityUniqueIdentifier][$entityField] = $this->globalIdentifiers[$entityUniqueIdentifier]->$getter();
+                        foreach ($data['actions']['output'] as $key => $output) {
+                            $outputEntity = $dataHelper::ENTITY_NAMESPACE.ucfirst($key);
+                            $entityResults = [];
+                            foreach($output['get'] as $key => $item) {
+                                $getter = 'get' . $item;
+                                // TODO: Fix circular reference issue. @axel
+                                $entityResults[] = $this->queryHelper->getEntityRepository($outputEntity)->findOneBy(['id' => $output['id'] ])->$getter()->toArray();
+                            }
                         }
+                        $this->response['data'] = $entityResults;
                     }
                 }
             }
         }
+    }
+
+    public function toArray($object){
+        return json_decode($this->serializer->serialize($object,'json'),true);
     }
 
     /**
