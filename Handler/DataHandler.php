@@ -171,14 +171,11 @@ class DataHandler
                     if ($action === 'update') {
 
                         if(empty($entityFields['findBy']) && empty($entityFields['updateRecord'])) return;
-                        //if(empty($entityFields['findBy']['entityName'])) return;
-
 
                         $entity = $this->queryHelper->getEntityRepository($fullEntityNamespace)->findBy($entityFields['findBy']);
-                        /* $entityName = $entityFields['findBy']['entityName'];
-                         unset($entityFields['findBy']['entityName']);*/
                         $form = $this->dynamicForm($entity[0], $entityFields['updateRecord']);
                         $form->submit($entityFields['updateRecord']);
+
                         /*Check if the current $form has been submitted, and is valid.*/
                         if ($form->isSubmitted() && $form->isValid()) {
                             $this->globalIdentifiers[$entityUniqueIdentifier] = $entity[0];
@@ -187,6 +184,23 @@ class DataHandler
                             $this->response['message'] = $entityName . ' Updated';
                         }else{
                             throw new RuntimeException($form->getErrors()->current()->getMessage());
+                        }
+                    }
+
+                    /**
+                     * DELETE
+                     */
+                    if($action === 'delete') {
+
+                        if(empty($entityFields['findOneBy'])) return;
+
+                        $entity = $this->queryHelper->getEntityRepository($fullEntityNamespace)->findOneBy($entityFields['findOneBy']);
+                        if($entity != null) {
+                            $this->queryHelper->remove($entity);
+                            $this->response['code'] = 200;
+                            $this->response['message'] = $entityName . ' Removed';
+                        } else {
+                            throw new RuntimeException('Unable to delete record');
                         }
                     }
 
