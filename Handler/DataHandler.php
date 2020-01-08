@@ -158,6 +158,25 @@ class DataHandler
                     }
 
                     /**
+                     * UPDATE
+                     */
+                    if ($action === 'update') {
+                        $entity = new $fullEntityNamespace();
+                        $form = $this->dynamicForm($entity, $entityFields);
+                        $form->submit($entityFields);
+
+                        /*Check if the current $form has been submitted, and is valid.*/
+                        if ($form->isSubmitted() && $form->isValid()) {
+                            $this->globalIdentifiers[$entityUniqueIdentifier] = $entity;
+                            $this->queryHelper->persistEntity($entity);
+                            $this->response['code'] = 200;
+                            $this->response['message'] = $entityName . ' Updated';
+                        }else{
+                            throw new RuntimeException($form->getErrors()->current()->getMessage());
+                        }
+                    }
+
+                    /**
                      * CONNECT
                      */
                     if ($action === 'connect') {
@@ -380,16 +399,12 @@ class DataHandler
     public function updateRecord(Request $request): int
     {
         $dataHelper = $this->dataHelper;
-
         /*Unpack and decode data from $request in order to obtain form information.*/
         $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
-
         if (empty($data['targetEntity']) || empty($data['updateValues'])) {
             throw new RuntimeException('Data that was sent is incorrectly formatted!');
         }
-
         /*Instantiate a new User object for us to insert the $request form data into.*/
-
         if (count(
                 $entity = $this->queryHelper->getEntityRepository($dataHelper->getClassPath())->findBy(
                     $data['targetEntity']
@@ -398,44 +413,79 @@ class DataHandler
             $entity = $entity[0];
         } else {
             throw new RuntimeException(
-                'Data that was sent is too vague to accurately update, please supply more detail in order to narrow the search scope'
+                'Data that was sent is too vauge to accuratly update, please supply more detail in order to narrow the search scope'
             );
         }
-
         /*Create form with corresponding Entity paired to it*/
         $bindingMethod = [];
         $objectMethods = $this->dataHelper->getObjectProperties($entity);
+        $class = $this->queryHelper->getClassMetadata(get_class($entity));
         foreach ($data['updateValues'] as $key => $updateValue) {
-            if (array_key_exists(ucfirst(strtolower($key)), $objectMethods)) {
-                foreach ($objectMethods[ucfirst(strtolower($key))] as $objectMethod) {
+            if (array_key_exists(ucfirst($key), $objectMethods)) {
+                if($class->hasAssociation($key)){
+                    $relationArray = $class->getAssociationMapping($key);
+                    $updateValue = $this->queryHelper->getEntityRepository($relationArray['targetEntity'])->find($updateValue);
+                }
+                foreach ($objectMethods[ucfirst($key)] as $objectMethod) {
                     if (false !== stripos($objectMethod, 'set')) {
                         $entity->$objectMethod($updateValue);
                     }
                 }
             }
         }
-
         $this->queryHelper->persistEntity($entity);
-
         return $entity->getId();
     }
-
     /**
      * julianlankerd@gmail.com, build a filtration system, and actually use $request!
      *
      * @return string
      * @throws \Exception
      */
-    public function getAllValues(): string
+    public function getAllValues(Request $request): string
     {
+        $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $filterEntity = array();
+        $orderBy = array();
+        $limit = null;
+        $findFunction = 'findBy';
+        if (!empty($data['filterEntity'])) {
+            $filterEntity = $data['filterEntity'];
+        }
+        if (!empty($data['orderBy'])) {
+            $orderBy = $data['orderBy'];
+        }
+        if (!empty($data['limit'])) {
+            $limit = $data['limit'];
+            if($limit == 1) {
+                $findFunction = 'findOneBy';
+            }
+        }
+        $dataQuery = $this->queryHelper->getEntityRepository('App:'.$this->dataHelper->getClassName())->$findFunction(
+            $filterEntity, // where
+            $orderBy,      // orderBy
+            $limit         // limit
+        );
         return $this->serializer->serialize(
-            $this->queryHelper->getEntityRepository($this->dataHelper->getClassName())->findAll(),
-            'json'
+            $dataQuery,
+            'json',
+            [
+                ObjectNormalizer::ENABLE_MAX_DEPTH => true,
+                'circular_reference_handler' => function ($object) {
+                    return $object->getId();
+                },
+                'max_depth_handler' => function ($innerObject, $outerObject, string $attributeName, string $format = null, array $context = []) {
+                    if(method_exists($innerObject,'getId')){
+                        return $innerObject->getId();
+                    } else {
+                        return '';
+                    }
+                }
+            ]
         );
     }
-
     /**
-     * @param Request $request
+     * @param \Symfony\Component\HttpFoundation\Request $request
      *
      * @throws Exception
      */
@@ -443,13 +493,10 @@ class DataHandler
     {
         /*Grab the Doctrine Entity Manager so that we can process our Entity to the database.*/
         $queryHelper = $this->queryHelper;
-
         /*Unpack and decode data from $request in order to obtain form information.*/
         $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
-
         /*There should be information that can be used to find the specified "primaryEntity" in the database.*/
         $primaryEntity = $data['primaryEntity'];
-
         /*There should be information that can be used to find the multiple specified "secondaryEntities" in the database.*/
         $secondaryEntities = $data['secondaryEntities'];
         /**
@@ -467,12 +514,9 @@ class DataHandler
         } catch (Exception $e) {
             throw $e;
         }
-
         /*Check if there are many objects that have been returned to the return*/
         $primaryEntity = $this->dataHelper->hasOneValue($primaryEntity, 'primaryEntity');
-
         $objectProperties = $this->dataHelper->getObjectProperties($primaryEntity);
-
         foreach ($secondaryEntities as $entityName => $entityData) {
             /**
              * Check to see if there are multiple
@@ -490,9 +534,7 @@ class DataHandler
                  */
                 $entityName = explode('_', $entityName)[0];
             }
-
             $entityName = $this->dataHelper->singularize(ucfirst($entityName));
-
             /**
              * Check if any of the properties passed are an array.
              * If the property is, an exception will be thrown
@@ -503,7 +545,6 @@ class DataHandler
              * Sorry for any temporary inconveniences! It'll be usable soon!
              * julianlankerd@gmail.com needs to build association functionality capable in the "connector"
              */
-
             foreach ($entityData as $index => $entityDatum) {
                 if (is_array($entityDatum)) {
                     throw new DomainException(
@@ -511,22 +552,18 @@ class DataHandler
                     );
                 }
             }
-
             try {
                 $returnedValue = $queryHelper->getEntityRepository('App:'.$entityName)->findBy($entityData);
             } catch (Exception $e) {
                 throw new RuntimeException($e->getMessage());
             }
-
             /*Check if there are many objects that have been returned to the return*/
             $entity = $this->dataHelper->hasOneValue($returnedValue, $entityName);
-
             $bindingMethod = null;
             foreach ($objectProperties[ucfirst($entityName)] as $objectMethod) {
                 if (false !== stripos($objectMethod, 'add')) {
                     $bindingMethod = $objectMethod;
                 }
-
                 if (false !== stripos($objectMethod, 'set')) {
                     $bindingMethod = $objectMethod;
                 }
@@ -535,9 +572,6 @@ class DataHandler
         }
         $queryHelper->persistEntity($primaryEntity);
     }
-
-    // Merge Create and Create Child Record into a recursive call. No need to have them seperated - this is mainly being used to create a user and any records associated with it.
-    // TODO: Rewrite CreateRecord and associated functions.
     public function createRecord(Request $request)
     {
         $queryHelper = $this->queryHelper;
@@ -582,7 +616,24 @@ class DataHandler
             }
         }
         /*Create form with corresponding Entity paired to it*/
-        $form = $this->dynamicForm($entity, $data);
+        $class = $this->queryHelper->getClassMetadata(get_class($entity));
+        $form = $this->formFactory->create('Symfony\Component\Form\Extension\Core\Type\FormType', $entity, ['csrf_protection' => false]);
+        foreach($data as $key => $value) {
+            if(!$class->hasAssociation($key)){
+                $fieldArray = $class->getFieldMapping($key);
+                if($fieldArray['type'] == 'time'){
+                    $form->add($key, TimeType::class,['widget' => 'single_text']);
+                } elseif ($fieldArray['type'] == 'date'){
+                    $form->add($key, DateType::class,['widget' => 'single_text']);
+                } elseif ($fieldArray['type'] == 'datetime'){
+                    $form->add($key, DateTimeType::class,['widget' => 'single_text']);
+                }else{
+                    $form->add($key);
+                }
+            }else{
+                $form->add($key);
+            }
+        }
         /*Submit $data that was unpacked from the $response into the $form.*/
         $form->submit($data);
         /*Check if the current $form has been submitted, and is valid.*/
@@ -592,7 +643,6 @@ class DataHandler
         }
         throw new RuntimeException($form->getErrors()->current()->getMessage());
     }
-
     private function checkArrayContainArray($array) {
         if(!isset($array['searchField'])) {
             foreach($array as $value){
@@ -603,7 +653,7 @@ class DataHandler
         }
         return false;
     }
-    private function createChildRecord($key, $data, $parentClassName = '') {
+    private function createChildRecord($key, $data, $parentClassName = null) {
         $queryHelper = $this->queryHelper;
         $dataHelper = $this->dataHelper;
         $this->setClass($key);
@@ -643,18 +693,51 @@ class DataHandler
                 unset($data[$key]);
             }
         }
-
+        /*Create form with corresponding Entity paired to it*/
+        $class = $this->queryHelper->getClassMetadata(get_class($entity));
+        $form = $this->formFactory->create('Symfony\Component\Form\Extension\Core\Type\FormType', $entity, ['csrf_protection' => false]);
+        foreach($data as $key => $value) {
+            if(!$class->hasAssociation($key)){
+                $fieldArray = $class->getFieldMapping($key);
+                if($fieldArray['type'] == 'time'){
+                    $form->add($key, TimeType::class,['widget' => 'single_text']);
+                } elseif ($fieldArray['type'] == 'date'){
+                    $form->add($key, DateType::class,['widget' => 'single_text']);
+                } elseif ($fieldArray['type'] == 'datetime'){
+                    $form->add($key, DateTimeType::class,['widget' => 'single_text']);
+                }else{
+                    $form->add($key);
+                }
+            }else{
+                $form->add($key);
+            }
+        }
         /*Submit $data that was unpacked from the $response into the $form.*/
-        $form = $this->dynamicForm($entity, $data);
         $form->submit($data);
         /*Check if the current $form has been submitted, and is valid.*/
         if ($form->isSubmitted() && $form->isValid()) {
             $this->queryHelper->persistEntity($entity);
             $response = $entity->getId();
-            if (!empty($parentClassName)) {
+            if ($parentClassName != null) {
                 $this->setClass($parentClassName);
             }
             return $response;
         }
+    }
+    /**
+     * @return string
+     * @throws \Exception
+     */
+    public function deleteRecord(Request $request)
+    {
+        $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        $dataObj = $this->queryHelper->getEntityRepository($this->dataHelper->getClassPath())->find($data['id']);
+        if($dataObj){
+            $this->queryHelper->removeRecord($dataObj);
+            $result = 'success';
+        } else {
+            $result = 'failed';
+        }
+        return ['result'=>$result];
     }
 }
