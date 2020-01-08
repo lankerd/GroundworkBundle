@@ -44,6 +44,32 @@ class QueryHelper
      *
      * @return void
      */
+    public function remove(object $entity): void
+    {
+        $entityManager = $this->entityManager;
+
+        try {
+            $entityManager->remove($entity);
+            $entityManager->flush();
+        } catch (Exception $e) {
+            /**
+             * Throw a new exception to inform sender of the error.
+             *
+             * If an exception is thrown (an error is found), it will stop the process,
+             * and show the error that occurred in the "try" brackets.
+             * Instead of showing the exact error that occured in the exception,
+             * we're gonna over-generalize the error, because you never know when
+             * something nefarious may be afoot.
+             */
+            throw new RuntimeException($e->getMessage());
+        }
+    }
+
+    /**
+     * @param object $entity
+     *
+     * @return void
+     */
     public function persistEntity(object $entity, bool $flush = true): void
     {
         $entityManager = $this->entityManager;
