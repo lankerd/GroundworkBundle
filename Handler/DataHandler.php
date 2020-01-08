@@ -142,6 +142,14 @@ class DataHandler
                      * CREATE
                      */
                     if ($action === 'create') {
+                        // Lets see if we need to check if the record already exists?
+                        if(!empty($entityFields['checkIfExists'])) {
+                            $item = $this->queryHelper->getEntityRepository($fullEntityNamespace)->findBy($entityFields['checkIfExists']);
+                            if(!empty($item)) {
+                                throw new RuntimeException($entityName . ' Already Exists');
+                            }
+                        }
+
                         $entity = new $fullEntityNamespace();
                         $form = $this->dynamicForm($entity, $entityFields);
                         $form->submit($entityFields);
@@ -161,14 +169,20 @@ class DataHandler
                      * UPDATE
                      */
                     if ($action === 'update') {
-                        $entity = new $fullEntityNamespace();
-                        $form = $this->dynamicForm($entity, $entityFields);
-                        $form->submit($entityFields);
 
+                        if(empty($entityFields['findBy']) && empty($entityFields['updateRecord'])) return;
+                        //if(empty($entityFields['findBy']['entityName'])) return;
+
+
+                        $entity = $this->queryHelper->getEntityRepository($fullEntityNamespace)->findBy($entityFields['findBy']);
+                        /* $entityName = $entityFields['findBy']['entityName'];
+                         unset($entityFields['findBy']['entityName']);*/
+                        $form = $this->dynamicForm($entity[0], $entityFields['updateRecord']);
+                        $form->submit($entityFields['updateRecord']);
                         /*Check if the current $form has been submitted, and is valid.*/
                         if ($form->isSubmitted() && $form->isValid()) {
-                            $this->globalIdentifiers[$entityUniqueIdentifier] = $entity;
-                            $this->queryHelper->persistEntity($entity);
+                            $this->globalIdentifiers[$entityUniqueIdentifier] = $entity[0];
+                            $this->queryHelper->persistEntity($entity[0]);
                             $this->response['code'] = 200;
                             $this->response['message'] = $entityName . ' Updated';
                         }else{
