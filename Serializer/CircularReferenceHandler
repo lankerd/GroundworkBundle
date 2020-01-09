@@ -1,0 +1,9 @@
+<?php
+namespace Lankerd\GroundworkBundle\Serializer;
+
+class CircularReferenceHandler
+{
+    public function __invoke($object) {
+        return $object->id;
+    }
+}

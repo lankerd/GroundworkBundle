@@ -87,6 +87,18 @@ class DataHelper implements DataHelperInterface
     }
 
     /**
+     * Will provide a pluralized string
+     *
+     * @param string $word
+     *
+     * @return string
+     */
+    public function pluralize(string $word): string
+    {
+        return Inflector::pluralize($word);
+    }
+
+    /**
      * Checks a string for a given phrase at the exact end of a string.
      * This was explicitly designed with looking at Getters and Setters
      * in an entity.
@@ -128,16 +140,29 @@ class DataHelper implements DataHelperInterface
     }
 
     /**
+     * ===============
+     * IMPORTANT NOTES
+     * ===============
+     * Update this code to allow for users to supply filteration
+     * options.
+     *
+     * IE: return properties that are only objects, or non-objects, booleans, string, certain class type etc....
+     *
+     * Now that I think of it, should probably create some type of
+     * dynamic function that will be used for filtration, than implement it
+     * into this code.
+     *
+     *
      * This will grab all properties of the provided entity
      * and return an array of the properties with their
      * associated methods that can be accessed to sort through.
      *
-     * @param object $object
+     * @param mixed $object
      *
      * @return array
      * @throws \ReflectionException
      */
-    public function getObjectProperties(object $object) : array
+    public function getObjectProperties($object) : array
     {
         /**
          * Initialize objectProperties array in
@@ -190,7 +215,7 @@ class DataHelper implements DataHelperInterface
              * as we fill the array with the value that
              * has been provided!
              */
-            $objectProperties[$singularizedPropertyName] = $methodNames;
+            $objectProperties[$propertyName] = $methodNames;
         }
 
         /**
@@ -243,4 +268,25 @@ class DataHelper implements DataHelperInterface
 
         return new $entityPath;
     }
+
+    /**
+     * ===============
+     * IMPORTANT NOTES
+     * ===============
+     *
+     * This must be capable of preparing filtration
+     * options for queries, object property scanning (all props, int, string, only objects, certain class name. etc),
+     * determine how values should be sent
+     *
+     */
+    public function setupFilter(object $entity)
+    {
+        $propertyNames = array();
+        $entityReflection = new ReflectionClass($entity);
+        foreach ($entityReflection->getProperties() as $property) {
+//            $property->setAccessible(true);
+        }
+        return $propertyNames;
+    }
+
 }

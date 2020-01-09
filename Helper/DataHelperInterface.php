@@ -37,6 +37,13 @@ interface DataHelperInterface
     public function singularize(string $word): string;
 
     /**
+     * @param string $word
+     *
+     * @return string
+     */
+    public function pluralize(string $word): string;
+
+    /**
      * @param $haystack
      * @param $needle
      *
@@ -53,11 +60,11 @@ interface DataHelperInterface
     public function hasOneValue(array $data, string $subjectsName = 'Entity') : object;
 
     /**
-     * @param object $object
+     * @param mixed $object
      *
      * @return array
      */
-    public function getObjectProperties(object $object) : array;
+    public function getObjectProperties($mixed) : array;
 
     /**
      * @return string

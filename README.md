@@ -1,3 +1,4 @@
+
 [![SymfonyInsight](https://insight.symfony.com/projects/0892be64-8bd2-4794-977b-dfb221e3fd2c/big.svg)](https://insight.symfony.com/projects/0892be64-8bd2-4794-977b-dfb221e3fd2c)
 
 Make sure to add the code below:
