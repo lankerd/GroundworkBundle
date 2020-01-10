@@ -161,7 +161,7 @@ class DataHandler
                             $this->response['code'] = 200;
                             $this->response['message'] = $entityName . ' Created';
                         }else{
-                            throw new RuntimeException($form->getErrors()->current()->getMessage());
+                            throw new RuntimeException($entityName . ' had an Error. The Flux capacitor is broken again.');
                         }
                     }
 
@@ -281,8 +281,15 @@ class DataHandler
         $getter = '';
         $criteria = [];
         $excludes = [];
+        $includes = [];
 
-        if($items['excludes']) {
+        if(!empty($items['includes'])) {
+            $includes = $items['includes'];
+            unset($items['includes']);
+            unset($items['excludes']);
+        }
+
+        if(!empty($items['excludes'])) {
             $excludes = $items['excludes'];
             unset($items['excludes']);
         }
@@ -295,55 +302,83 @@ class DataHandler
             }
         }
 
-        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findOneBy($criteria)->$getter(), $excludes);
+        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findOneBy($criteria)->$getter(), $excludes, $includes);
     }
 
     public function find( $outputEntity, $items )
     {
         $excludes = [];
+        $includes = [];
+
+        if(!empty($items['includes'])) {
+            $includes = $items['includes'];
+            unset($items['includes']);
+            unset($items['excludes']);
+        }
 
         if($items['excludes']) {
             $excludes = $items['excludes'];
             unset($items['excludes']);
         }
 
-        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->find($items['id']), $excludes);
+        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->find($items['id']), $excludes, $includes);
     }
 
     public function findOneBy( $outputEntity, $items )
     {
         $excludes = [];
+        $includes = [];
+
+        if(!empty($items['includes'])) {
+            $includes = $items['includes'];
+            unset($items['includes']);
+            unset($items['excludes']);
+        }
 
         if($items['excludes']) {
             $excludes = $items['excludes'];
             unset($items['excludes']);
         }
 
-        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findOneBy($items['criteria']), $excludes);
+        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findOneBy($items['criteria']), $excludes, $includes);
     }
 
     public function findAll( $outputEntity, $items )
     {
         $excludes = [];
+        $includes = [];
+
+        if(!empty($items['includes'])) {
+            $includes = $items['includes'];
+            unset($items['includes']);
+            unset($items['excludes']);
+        }
 
         if($items['excludes']) {
             $excludes = $items['excludes'];
             unset($items['excludes']);
         }
 
-        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findAll(), $excludes);
+        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findAll(), $excludes, $includes);
     }
 
     public function findBy( $outputEntity, $items )
     {
         $excludes = [];
+        $includes = [];
+
+        if(!empty($items['includes'])) {
+            $includes = $items['includes'];
+            unset($items['includes']);
+            unset($items['excludes']);
+        }
 
         if($items['excludes']) {
             $excludes = $items['excludes'];
             unset($items['excludes']);
         }
 
-        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findBy($items['criteria']), $excludes);
+        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findBy($items['criteria']), $excludes, $includes);
     }
 
     public function toArray($object)
@@ -351,13 +386,19 @@ class DataHandler
         return json_decode($this->serializer->serialize($object,'json'),true);
     }
 
-    public function serializeFix( $object, $excludes = [] )
+    public function serializeFix( $object, $excludes = [], $includes = [] )
     {
         $normalizer = new ObjectNormalizer();
         $encoder = new JsonEncoder();
-
         $serializer = new Serializer([$normalizer], [$encoder]);
-        return json_decode($serializer->serialize($object, 'json', [AbstractNormalizer::IGNORED_ATTRIBUTES => $excludes]), true);
+
+        if(!empty($includes)) {
+            return json_decode($serializer->serialize($object, 'json', [AbstractNormalizer::ATTRIBUTES => $includes]), true);
+        } elseif( !empty($excludes)) {
+            return json_decode($serializer->serialize($object, 'json', [AbstractNormalizer::IGNORED_ATTRIBUTES => $excludes]), true);
+        } else {
+            return json_decode($serializer->serialize($object, 'json'), true);
+        }
     }
 
     public function dynamicForm( $entity, $data )
