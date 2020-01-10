@@ -316,7 +316,7 @@ class DataHandler
             unset($items['excludes']);
         }
 
-        if($items['excludes']) {
+        if(!empty($items['excludes'])) {
             $excludes = $items['excludes'];
             unset($items['excludes']);
         }
@@ -335,7 +335,7 @@ class DataHandler
             unset($items['excludes']);
         }
 
-        if($items['excludes']) {
+        if(!empty($items['excludes'])) {
             $excludes = $items['excludes'];
             unset($items['excludes']);
         }
@@ -354,7 +354,7 @@ class DataHandler
             unset($items['excludes']);
         }
 
-        if($items['excludes']) {
+        if(!empty($items['excludes'])) {
             $excludes = $items['excludes'];
             unset($items['excludes']);
         }
@@ -373,7 +373,7 @@ class DataHandler
             unset($items['excludes']);
         }
 
-        if($items['excludes']) {
+        if(!empty($items['excludes'])) {
             $excludes = $items['excludes'];
             unset($items['excludes']);
         }
