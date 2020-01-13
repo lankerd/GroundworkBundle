@@ -161,7 +161,7 @@ class DataHandler
                             $this->response['code'] = 200;
                             $this->response['message'] = $entityName . ' Created';
                         }else{
-                            throw new RuntimeException($entityName . ' had an Error. The Flux capacitor is broken again.');
+                            throw new RuntimeException($entityName . ' had an Error. '.$form->getErrors()->current()->getMessage());
                         }
                     }
 
@@ -266,6 +266,16 @@ class DataHandler
                                     if(!$items['criteria']) continue;
                                     $entityResults[$items['get']] = $this->findBy($dataHelper::ENTITY_NAMESPACE.$outputEntity, $items);
                                 }
+
+                                /**
+                                 * @todo need to write in a way for custom repo calls to be made.
+                                */
+//                                if($key === 'customRepository') {
+//                                    dump($items['criteria']);
+//                                    die;
+//                                    if(!$items['criteria']) continue;
+//                                    $entityResults[$items['get']] = $this->findBy($dataHelper::ENTITY_NAMESPACE.$outputEntity, $items);
+//                                }
                             }
                         }
 
