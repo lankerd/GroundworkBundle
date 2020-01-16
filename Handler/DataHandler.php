@@ -158,8 +158,8 @@ class DataHandler
                         if ($form->isSubmitted() && $form->isValid()) {
                             $this->globalIdentifiers[$entityUniqueIdentifier] = $entity;
                             $this->queryHelper->persistEntity($entity);
-                            
-                            $this->response['data'] = $entity->getId();
+
+                            $this->response['data']['responseId'] = $entity->getId();
                             $this->response['code'] = 200;
                             $this->response['message'] = $entityName . ' Created';
                         }else{
