@@ -68,6 +68,7 @@ class QueryHelper
     /**
      * @param object $entity
      *
+     * @param bool $flush
      * @return void
      */
     public function persistEntity(object $entity, bool $flush = true): void
