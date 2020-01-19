@@ -171,8 +171,9 @@ class DataHandler
                      * UPDATE
                      */
                     if ($action === 'update') {
-
-                        if(empty($entityFields['findBy']) && empty($entityFields['updateRecord'])) return;
+                        if(empty($entityFields['findBy']) && empty($entityFields['updateRecord'])) {
+                            throw new RuntimeException($entityName . ' was not able to find records to update.');
+                        };
 
                         $entity = $this->queryHelper->getEntityRepository($fullEntityNamespace)->findBy($entityFields['findBy']);
                         $form = $this->dynamicForm($entity[0], $entityFields['updateRecord']);
@@ -182,6 +183,7 @@ class DataHandler
                         if ($form->isSubmitted() && $form->isValid()) {
                             $this->globalIdentifiers[$entityUniqueIdentifier] = $entity[0];
                             $this->queryHelper->persistEntity($entity[0]);
+
                             $this->response['code'] = 200;
                             $this->response['message'] = $entityName . ' Updated';
                         }else{
@@ -193,8 +195,9 @@ class DataHandler
                      * DELETE
                      */
                     if($action === 'delete') {
-
-                        if(empty($entityFields['findOneBy'])) return;
+                        if(empty($entityFields['findOneBy'])) {
+                            throw new RuntimeException($entityName . ' was unable to be removed');
+                        }
 
                         $entity = $this->queryHelper->getEntityRepository($fullEntityNamespace)->findOneBy($entityFields['findOneBy']);
                         if($entity != null) {
@@ -202,7 +205,7 @@ class DataHandler
                             $this->response['code'] = 200;
                             $this->response['message'] = $entityName . ' Removed';
                         } else {
-                            throw new RuntimeException('Unable to delete record');
+                            throw new RuntimeException($entityName . ' unable to delete record');
                         }
                     }
 
@@ -226,7 +229,7 @@ class DataHandler
                                     }
                                 }
                             }else{
-                                throw new RuntimeException($fieldName.' is not a valid globalIdentifier, try looking at your request and ensure');
+                                throw new RuntimeException($fieldName.' is not a valid Identifier, check your request.');
                             }
                         }
                         $this->queryHelper->persistEntity($entity, false);
@@ -241,46 +244,44 @@ class DataHandler
                         foreach($data['actions']['response'] as $outputEntity => $request) {
                             foreach($request as $key => $items) {
                                 if( $key === 'getter'){
-                                    if(!$items['get']) continue;
+                                    if(!isset($items['get'])) continue;
                                     $entityResults[$items['get']] = $this->getter($dataHelper::ENTITY_NAMESPACE.$outputEntity, $items);
                                 }
 
                                 // find($id, $lockMode = null, $lockVersion = null)
                                 if( $key === 'find'){
-                                    if(!$items['id']) continue;
+                                    if(!isset($items['id'])) continue;
                                     $entityResults[$items['get']] = $this->find($dataHelper::ENTITY_NAMESPACE.$outputEntity, $items);
                                 }
 
                                 // findOneBy(array $criteria, array $orderBy = null)
                                 if($key === 'findOneBy') {
-                                    if(!$items['criteria']) continue;
+                                    if(!isset($items['criteria'])) continue;
                                     $entityResults[$items['get']] = $this->findOneBy($dataHelper::ENTITY_NAMESPACE.$outputEntity, $items);
                                 }
 
                                 // findAll()
                                 if($key === 'findAll') {
-                                    if(!$items['get']) continue;
+                                    if(!isset($items['get'])) continue;
                                     $entityResults[$items['get']] = $this->findAll($dataHelper::ENTITY_NAMESPACE.$outputEntity, $items);
                                 }
 
                                 // findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
                                 if($key === 'findBy') {
-                                    if(!$items['criteria']) continue;
+                                    if(!isset($items['criteria'])) continue;
                                     $entityResults[$items['get']] = $this->findBy($dataHelper::ENTITY_NAMESPACE.$outputEntity, $items);
                                 }
 
                                 /**
                                  * @todo need to write in a way for custom repo calls to be made.
-                                */
-//                                if($key === 'customRepository') {
-//                                    dump($items['criteria']);
-//                                    die;
-//                                    if(!$items['criteria']) continue;
-//                                    $entityResults[$items['get']] = $this->findBy($dataHelper::ENTITY_NAMESPACE.$outputEntity, $items);
-//                                }
+                                 */
+                                if($key === 'custom') {
+                                    if(!isset($items['functionName'])) continue;
+                                    $customFunction = $items['functionName'];
+                                    $entityResults[] = $this->queryHelper->getEntityRepository($dataHelper::ENTITY_NAMESPACE.$outputEntity)->$customFunction($items['criteria']);
+                                }
                             }
                         }
-
                         $this->response['data'] = $entityResults;
                     }
                 }
