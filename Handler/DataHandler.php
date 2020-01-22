@@ -278,7 +278,7 @@ class DataHandler
                                 if($key === 'custom') {
                                     if(!isset($items['functionName'])) continue;
                                     $customFunction = $items['functionName'];
-                                    $entityResults[] = $this->queryHelper->getEntityRepository($dataHelper::ENTITY_NAMESPACE.$outputEntity)->$customFunction($items['criteria']);
+                                    $entityResults[$items['get']] = $this->queryHelper->getEntityRepository($dataHelper::ENTITY_NAMESPACE.$outputEntity)->$customFunction($items['criteria']);
                                 }
                             }
                         }
