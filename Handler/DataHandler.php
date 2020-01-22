@@ -232,7 +232,7 @@ class DataHandler
                                 throw new RuntimeException($fieldName.' is not a valid Identifier, check your request.');
                             }
                         }
-                        $this->queryHelper->persistEntity($entity, false);
+                        $this->queryHelper->persistEntity($entity);
                         $this->globalIdentifiers[$entityUniqueIdentifier] = $entity;
                     }
 
@@ -324,7 +324,9 @@ class DataHandler
         $includes = !empty($vars['includes']) ? $vars['includes'] : ''; unset($vars['includes']);
         $excludes = !empty($vars['excludes']) ? $vars['excludes'] : ''; unset($vars['excludes']);
 
-        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findOneBy($vars['criteria'], $vars['orderBy']), $excludes, $includes);
+        $orderBy = !empty($vars['orderBy']) ? $vars['orderBy'] : []; unset($vars['orderBy']);
+
+        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findOneBy($vars['criteria'], $orderBy), $excludes, $includes);
     }
 
     public function findAll( $outputEntity, $items )
@@ -342,7 +344,11 @@ class DataHandler
         $includes = !empty($vars['includes']) ? $vars['includes'] : ''; unset($vars['includes']);
         $excludes = !empty($vars['excludes']) ? $vars['excludes'] : ''; unset($vars['excludes']);
 
-        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findBy($vars['criteria'], $vars['orderBy'], $vars['limit'], $vars['offset']), $excludes, $includes);
+        $orderBy = !empty($vars['orderBy']) ? $vars['orderBy'] : []; unset($vars['orderBy']);
+        $limit = !empty($vars['limit']) ? $vars['limit'] : null; unset($vars['limit']);
+        $offset = !empty($vars['offset']) ? $vars['offset'] : 0; unset($vars['offset']);
+
+        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findBy($vars['criteria'], $orderBy, $limit, $offset), $excludes, $includes);
     }
 
     public function serializeFix( $object, $excludes = [], $includes = [] )
