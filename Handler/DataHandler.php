@@ -278,7 +278,9 @@ class DataHandler
                                 if($key === 'custom') {
                                     if(!isset($items['functionName'])) continue;
                                     $customFunction = $items['functionName'];
-                                    $entityResults[$items['get']] = $this->queryHelper->getEntityRepository($dataHelper::ENTITY_NAMESPACE.$outputEntity)->$customFunction($items['criteria']);
+                                    $includes = !empty($items['includes']) ? $items['includes'] : ''; unset($items['includes']);
+                                    $excludes = !empty($items['excludes']) ? $items['excludes'] : ''; unset($items['excludes']);
+                                    $entityResults['response'] =  $this->serializeFix($this->queryHelper->getEntityRepository($dataHelper::ENTITY_NAMESPACE.$outputEntity)->$customFunction($items['criteria']), $excludes, $includes);
                                 }
                             }
                         }
