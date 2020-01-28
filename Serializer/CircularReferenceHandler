@@ -1,9 +1,25 @@
-<?php
-namespace Lankerd\GroundworkBundle\Serializer;
+namespace App\Serializer;
+use App\Entity\Skill;
 
 class CircularReferenceHandler
 {
-    public function __invoke($object) {
-        return $object->id;
+    /**
+     * @var RouterInterface
+     */
+    private $router;
+    public function __construct(RouterInterface $router)
+    {
+        $this->router = $router;
+    }
+    
+    public function __invoke($object)
+    {
+        switch ($object) {
+            case $object instanceof Skill:
+                return ['id' => $object->getId(), 'name' => $object->getName()]);
+            default:
+                return $object->getId();
+        }
+        return $object->getId();
     }
 }

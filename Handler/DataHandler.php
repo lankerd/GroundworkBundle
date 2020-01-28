@@ -158,10 +158,12 @@ class DataHandler
                         if ($form->isSubmitted() && $form->isValid()) {
                             $this->globalIdentifiers[$entityUniqueIdentifier] = $entity;
                             $this->queryHelper->persistEntity($entity);
+
+                            $this->response['data']['responseId'] = $entity->getId();
                             $this->response['code'] = 200;
                             $this->response['message'] = $entityName . ' Created';
                         }else{
-                            throw new RuntimeException($form->getErrors()->current()->getMessage());
+                            throw new RuntimeException($entityName . ' had an Error. '.$form->getErrors()->current()->getMessage());
                         }
                     }
 
@@ -169,8 +171,9 @@ class DataHandler
                      * UPDATE
                      */
                     if ($action === 'update') {
-
-                        if(empty($entityFields['findBy']) && empty($entityFields['updateRecord'])) return;
+                        if(empty($entityFields['findBy']) && empty($entityFields['updateRecord'])) {
+                            throw new RuntimeException($entityName . ' was not able to find records to update.');
+                        };
 
                         $entity = $this->queryHelper->getEntityRepository($fullEntityNamespace)->findBy($entityFields['findBy']);
                         $form = $this->dynamicForm($entity[0], $entityFields['updateRecord']);
@@ -180,6 +183,7 @@ class DataHandler
                         if ($form->isSubmitted() && $form->isValid()) {
                             $this->globalIdentifiers[$entityUniqueIdentifier] = $entity[0];
                             $this->queryHelper->persistEntity($entity[0]);
+
                             $this->response['code'] = 200;
                             $this->response['message'] = $entityName . ' Updated';
                         }else{
@@ -191,8 +195,9 @@ class DataHandler
                      * DELETE
                      */
                     if($action === 'delete') {
-
-                        if(empty($entityFields['findOneBy'])) return;
+                        if(empty($entityFields['findOneBy'])) {
+                            throw new RuntimeException($entityName . ' was unable to be removed');
+                        }
 
                         $entity = $this->queryHelper->getEntityRepository($fullEntityNamespace)->findOneBy($entityFields['findOneBy']);
                         if($entity != null) {
@@ -200,7 +205,7 @@ class DataHandler
                             $this->response['code'] = 200;
                             $this->response['message'] = $entityName . ' Removed';
                         } else {
-                            throw new RuntimeException('Unable to delete record');
+                            throw new RuntimeException($entityName . ' unable to delete record');
                         }
                     }
 
@@ -224,10 +229,10 @@ class DataHandler
                                     }
                                 }
                             }else{
-                                throw new RuntimeException($fieldName.' is not a valid globalIdentifier, try looking at your request and ensure');
+                                throw new RuntimeException($fieldName.' is not a valid Identifier, check your request.');
                             }
                         }
-                        $this->queryHelper->persistEntity($entity, false);
+                        $this->queryHelper->persistEntity($entity);
                         $this->globalIdentifiers[$entityUniqueIdentifier] = $entity;
                     }
 
@@ -239,36 +244,46 @@ class DataHandler
                         foreach($data['actions']['response'] as $outputEntity => $request) {
                             foreach($request as $key => $items) {
                                 if( $key === 'getter'){
-                                    if(!$items['get']) continue;
+                                    if(!isset($items['get'])) continue;
                                     $entityResults[$items['get']] = $this->getter($dataHelper::ENTITY_NAMESPACE.$outputEntity, $items);
                                 }
 
                                 // find($id, $lockMode = null, $lockVersion = null)
                                 if( $key === 'find'){
-                                    if(!$items['id']) continue;
+                                    if(!isset($items['id'])) continue;
                                     $entityResults[$items['get']] = $this->find($dataHelper::ENTITY_NAMESPACE.$outputEntity, $items);
                                 }
 
                                 // findOneBy(array $criteria, array $orderBy = null)
                                 if($key === 'findOneBy') {
-                                    if(!$items['criteria']) continue;
+                                    if(!isset($items['criteria'])) continue;
                                     $entityResults[$items['get']] = $this->findOneBy($dataHelper::ENTITY_NAMESPACE.$outputEntity, $items);
                                 }
 
                                 // findAll()
                                 if($key === 'findAll') {
-                                    if(!$items['get']) continue;
+                                    if(!isset($items['get'])) continue;
                                     $entityResults[$items['get']] = $this->findAll($dataHelper::ENTITY_NAMESPACE.$outputEntity, $items);
                                 }
 
                                 // findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
                                 if($key === 'findBy') {
-                                    if(!$items['criteria']) continue;
+                                    if(!isset($items['criteria'])) continue;
                                     $entityResults[$items['get']] = $this->findBy($dataHelper::ENTITY_NAMESPACE.$outputEntity, $items);
+                                }
+
+                                /**
+                                 * @todo need to write in a way for custom repo calls to be made.
+                                 */
+                                if($key === 'custom') {
+                                    if(!isset($items['functionName'])) continue;
+                                    $customFunction = $items['functionName'];
+                                    $includes = !empty($items['includes']) ? $items['includes'] : ''; unset($items['includes']);
+                                    $excludes = !empty($items['excludes']) ? $items['excludes'] : ''; unset($items['excludes']);
+                                    $entityResults['response'] =  $this->serializeFix($this->queryHelper->getEntityRepository($dataHelper::ENTITY_NAMESPACE.$outputEntity)->$customFunction($items['criteria']), $excludes, $includes);
                                 }
                             }
                         }
-
                         $this->response['data'] = $entityResults;
                     }
                 }
@@ -279,15 +294,13 @@ class DataHandler
     public function getter( $outputEntity, $items )
     {
         $getter = '';
-        $criteria = [];
-        $excludes = [];
 
-        if($items['excludes']) {
-            $excludes = $items['excludes'];
-            unset($items['excludes']);
-        }
+        $vars = $this->getterVars($items);
+        $includes = !empty($vars['includes']) ? $vars['includes'] : ''; unset($vars['includes']);
+        $excludes = !empty($vars['excludes']) ? $vars['excludes'] : ''; unset($vars['excludes']);
 
-        foreach($items as $key => $item) {
+        // Take out the include and exclude
+        foreach($vars as $key => $item) {
             if ($key === 'get') {
                 $getter = 'get' . $item;
             } else {
@@ -295,69 +308,88 @@ class DataHandler
             }
         }
 
-        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findOneBy($criteria)->$getter(), $excludes);
+        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findOneBy($criteria)->$getter(), $excludes, $includes);
     }
 
     public function find( $outputEntity, $items )
     {
-        $excludes = [];
+        $vars = $this->getterVars($items);
+        $includes = !empty($vars['includes']) ? $vars['includes'] : ''; unset($vars['includes']);
+        $excludes = !empty($vars['excludes']) ? $vars['excludes'] : ''; unset($vars['excludes']);
 
-        if($items['excludes']) {
-            $excludes = $items['excludes'];
-            unset($items['excludes']);
-        }
-
-        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->find($items['id']), $excludes);
+        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->find($vars['id']), $excludes, $includes);
     }
 
     public function findOneBy( $outputEntity, $items )
     {
-        $excludes = [];
+        $vars = $this->getterVars($items);
+        $includes = !empty($vars['includes']) ? $vars['includes'] : ''; unset($vars['includes']);
+        $excludes = !empty($vars['excludes']) ? $vars['excludes'] : ''; unset($vars['excludes']);
 
-        if($items['excludes']) {
-            $excludes = $items['excludes'];
-            unset($items['excludes']);
-        }
+        $orderBy = !empty($vars['orderBy']) ? $vars['orderBy'] : []; unset($vars['orderBy']);
 
-        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findOneBy($items['criteria']), $excludes);
+        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findOneBy($vars['criteria'], $orderBy), $excludes, $includes);
     }
 
     public function findAll( $outputEntity, $items )
     {
-        $excludes = [];
+        $vars = $this->getterVars($items);
+        $includes = !empty($vars['includes']) ? $vars['includes'] : ''; unset($vars['includes']);
+        $excludes = !empty($vars['excludes']) ? $vars['excludes'] : ''; unset($vars['excludes']);
 
-        if($items['excludes']) {
-            $excludes = $items['excludes'];
-            unset($items['excludes']);
-        }
-
-        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findAll(), $excludes);
+        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findAll(), $excludes, $includes);
     }
 
     public function findBy( $outputEntity, $items )
     {
-        $excludes = [];
+        $vars = $this->getterVars($items);
+        $includes = !empty($vars['includes']) ? $vars['includes'] : ''; unset($vars['includes']);
+        $excludes = !empty($vars['excludes']) ? $vars['excludes'] : ''; unset($vars['excludes']);
 
-        if($items['excludes']) {
-            $excludes = $items['excludes'];
-            unset($items['excludes']);
-        }
+        $orderBy = !empty($vars['orderBy']) ? $vars['orderBy'] : []; unset($vars['orderBy']);
+        $limit = !empty($vars['limit']) ? $vars['limit'] : null; unset($vars['limit']);
+        $offset = !empty($vars['offset']) ? $vars['offset'] : 0; unset($vars['offset']);
 
-        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findBy($items['criteria']), $excludes);
+        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findBy($vars['criteria'], $orderBy, $limit, $offset), $excludes, $includes);
     }
 
-    public function toArray($object)
-    {
-        return json_decode($this->serializer->serialize($object,'json'),true);
-    }
-
-    public function serializeFix( $object, $excludes = [] )
+    public function serializeFix( $object, $excludes = [], $includes = [] )
     {
         $normalizer = new ObjectNormalizer();
         $encoder = new JsonEncoder();
-
         $serializer = new Serializer([$normalizer], [$encoder]);
-        return json_decode($serializer->serialize($object, 'json', [AbstractNormalizer::IGNORED_ATTRIBUTES => $excludes]), true);
+
+        if(!empty($includes)) {
+            return json_decode($serializer->serialize($object, 'json', [AbstractNormalizer::ATTRIBUTES => $includes]), true);
+        } elseif( !empty($excludes)) {
+            return json_decode($serializer->serialize($object, 'json', [AbstractNormalizer::IGNORED_ATTRIBUTES => $excludes]), true);
+        } else {
+            return json_decode($serializer->serialize($object, 'json'), true);
+        }
+    }
+
+    public function getterVars($items)
+    {
+        $return = $items;
+
+        // If we have includes we should not have excludes even if it is passed.
+        if(!empty($items['includes'])) {
+            $return['includes'] = $items['includes'];
+            unset($items['includes']);
+            unset($return['excludes']);
+        }
+
+        if(!empty($items['excludes']) && empty($return['includes'])) {
+            $return['excludes'] = $items['excludes'];
+            unset($items['excludes']);
+        }
+
+        if(!empty($items['orderBy'])) {
+            $return['orderBy'] = $items['orderBy'];
+            unset($items['orderBy']);
+        }
+
+        return $return;
     }
 
     public function dynamicForm( $entity, $data )
