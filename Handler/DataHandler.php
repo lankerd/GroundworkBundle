@@ -280,7 +280,7 @@ class DataHandler
                                     $customFunction = $items['functionName'];
                                     $includes = !empty($items['includes']) ? $items['includes'] : ''; unset($items['includes']);
                                     $excludes = !empty($items['excludes']) ? $items['excludes'] : ''; unset($items['excludes']);
-                                    $entityResults['response'] =  $this->serializeFix($this->queryHelper->getEntityRepository($dataHelper::ENTITY_NAMESPACE.$outputEntity)->$customFunction($items['criteria']), $excludes, $includes);
+                                    $entityResults[$items['get']] =  $this->serializeFix($this->queryHelper->getEntityRepository($dataHelper::ENTITY_NAMESPACE.$outputEntity)->$customFunction($items['criteria']), $excludes, $includes);
                                 }
                             }
                         }
@@ -422,29 +422,7 @@ class DataHandler
      */
     public function setRequestData(Request $request): void
     {
-        $file = $request->files->all();
-        $data = $request->request->all();
-        $json = $request->getContent();
-        if(count($file) > 0 && array_key_exists('params', $data)){
-          $fileConfigs = json_decode($data['files'], true, 512, JSON_THROW_ON_ERROR);
-          foreach ($fileConfigs as $key => $value) {
-            $tempFile = '';
-            if(array_key_exists($key, $file)) {
-              $tempFile = $file[$key];
-            }
-            if($tempFile != '' && $value['path'] != '' && $value['name'] != ''){
-              $tempFile->move(getcwd() . $value['path'], $value['name']);
-            }
-          }
-
-          $this->requestData = json_decode($data['params'], true, 512, JSON_THROW_ON_ERROR);
-        } elseif (strlen($json) > 0) {
-          $this->requestData = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
-        } elseif (array_key_exists('params', $data)) {
-          $this->requestData = json_decode($data['params'], true, 512, JSON_THROW_ON_ERROR);
-        } else {
-          $this->requestData = json_decode('', true, 512, JSON_THROW_ON_ERROR);
-        }
+        $this->requestData = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
     }
 
     /**
