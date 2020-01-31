@@ -280,7 +280,7 @@ class DataHandler
                                     $customFunction = $items['functionName'];
                                     $includes = !empty($items['includes']) ? $items['includes'] : ''; unset($items['includes']);
                                     $excludes = !empty($items['excludes']) ? $items['excludes'] : ''; unset($items['excludes']);
-                                    $entityResults['response'] =  $this->serializeFix($this->queryHelper->getEntityRepository($dataHelper::ENTITY_NAMESPACE.$outputEntity)->$customFunction($items['criteria']), $excludes, $includes);
+                                    $entityResults[$items['get']] =  $this->serializeFix($this->queryHelper->getEntityRepository($dataHelper::ENTITY_NAMESPACE.$outputEntity)->$customFunction($items['criteria']), $excludes, $includes);
                                 }
                             }
                         }
