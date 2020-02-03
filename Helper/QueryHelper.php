@@ -14,8 +14,6 @@ declare(strict_types=1);
 namespace Lankerd\GroundworkBundle\Helper;
 
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\EntityRepository;
-use Doctrine\ORM\Mapping\ClassMetadata;
 use Exception;
 use RuntimeException;
 
@@ -144,7 +142,7 @@ class QueryHelper implements QueryHelperInterface
     /**
      * @param string $entityPath
      *
-     * @return EntityManagerInterface
+     * @return \Doctrine\ORM\Mapping\ClassMetadata
      */
     public function getClassMetadata(string $entityPath)
     {
