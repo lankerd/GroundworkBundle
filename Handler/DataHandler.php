@@ -121,7 +121,7 @@ class DataHandler
              */
             if ($action === 'loadOrder') {
                 foreach ($entities as $entity) {
-                    $this->queryHelper->persistEntity($this->globalIdentifiers[$entity]);
+                    $this->queryHelper->persist($this->globalIdentifiers[$entity]);
                 }
                 continue;
             }
@@ -157,7 +157,7 @@ class DataHandler
                         /*Check if the current $form has been submitted, and is valid.*/
                         if ($form->isSubmitted() && $form->isValid()) {
                             $this->globalIdentifiers[$entityUniqueIdentifier] = $entity;
-                            $this->queryHelper->persistEntity($entity);
+                            $this->queryHelper->persist($entity);
 
                             $this->response['data']['responseId'] = $entity->getId();
                             $this->response['code'] = 200;
@@ -182,7 +182,7 @@ class DataHandler
                         /*Check if the current $form has been submitted, and is valid.*/
                         if ($form->isSubmitted() && $form->isValid()) {
                             $this->globalIdentifiers[$entityUniqueIdentifier] = $entity[0];
-                            $this->queryHelper->persistEntity($entity[0]);
+                            $this->queryHelper->persist($entity[0]);
 
                             $this->response['code'] = 200;
                             $this->response['message'] = $entityName . ' Updated';
@@ -232,7 +232,7 @@ class DataHandler
                                 throw new RuntimeException($fieldName.' is not a valid Identifier, check your request.');
                             }
                         }
-                        $this->queryHelper->persistEntity($entity);
+                        $this->queryHelper->persist($entity);
                         $this->globalIdentifiers[$entityUniqueIdentifier] = $entity;
                     }
 
@@ -493,7 +493,7 @@ class DataHandler
                 }
             }
         }
-        $this->queryHelper->persistEntity($entity);
+        $this->queryHelper->persist($entity);
         return $entity->getId();
     }
     /**
@@ -630,7 +630,7 @@ class DataHandler
             }
             $primaryEntity->$bindingMethod($entity);
         }
-        $queryHelper->persistEntity($primaryEntity);
+        $queryHelper->persist($primaryEntity);
     }
     public function createRecord(Request $request)
     {
@@ -698,7 +698,7 @@ class DataHandler
         $form->submit($data);
         /*Check if the current $form has been submitted, and is valid.*/
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->queryHelper->persistEntity($entity);
+            $this->queryHelper->persist($entity);
             return $entity->getId();
         }
         throw new RuntimeException($form->getErrors()->current()->getMessage());
@@ -776,7 +776,7 @@ class DataHandler
         $form->submit($data);
         /*Check if the current $form has been submitted, and is valid.*/
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->queryHelper->persistEntity($entity);
+            $this->queryHelper->persist($entity);
             $response = $entity->getId();
             if ($parentClassName != null) {
                 $this->setClass($parentClassName);

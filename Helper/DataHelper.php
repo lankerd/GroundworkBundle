@@ -1,4 +1,15 @@
 <?php
+declare(strict_types=1);
+/**
+ *
+ * This file is part of the LankerdGroundworkBundle package.
+ *
+ * <https://github.com/lankerd/GroundworkBundle//>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ *
+ */
 
 namespace Lankerd\GroundworkBundle\Helper;
 
@@ -46,10 +57,10 @@ class DataHelper implements DataHelperInterface
      *
      * @return void
      */
-    private function setRequestData(Request $request): void
-    {
-        json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
-    }
+//    private function setRequestData(Request $request): void
+//    {
+//        json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+//    }
 
     /**
      * Check to see if the specified class exists
@@ -143,7 +154,7 @@ class DataHelper implements DataHelperInterface
      * ===============
      * IMPORTANT NOTES
      * ===============
-     * Update this code to allow for users to supply filteration
+     * Update this code to allow for users to supply filtration
      * options.
      *
      * IE: return properties that are only objects, or non-objects, booleans, string, certain class type etc....
@@ -157,12 +168,12 @@ class DataHelper implements DataHelperInterface
      * and return an array of the properties with their
      * associated methods that can be accessed to sort through.
      *
-     * @param mixed $object
+     * @param object|string $mixed Can be an object, or the full namespace of a class
      *
      * @return array
      * @throws \ReflectionException
      */
-    public function getObjectProperties($object) : array
+    public function getObjectProperties($mixed)
     {
         /**
          * Initialize objectProperties array in
@@ -178,7 +189,7 @@ class DataHelper implements DataHelperInterface
          * pertinent to the object.
          */
         try {
-            $objectReflection = new ReflectionClass($object);
+            $objectReflection = new ReflectionClass($mixed);
         } catch (ReflectionException $e) {
             throw $e;
         }

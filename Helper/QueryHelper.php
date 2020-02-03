@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
  *
  * This file is part of the LankerdGroundworkBundle package.
@@ -9,9 +10,12 @@
  * file that was distributed with this source code.
  *
  */
+
 namespace Lankerd\GroundworkBundle\Helper;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\Mapping\ClassMetadata;
 use Exception;
 use RuntimeException;
 
@@ -22,7 +26,7 @@ use RuntimeException;
  * @package Lankerd\GroundworkBundle\Helper
  * @author  Julian Lankerd <julianlankerd@gmail.com>
  */
-class QueryHelper
+class QueryHelper implements QueryHelperInterface
 {
     /**
      * @var \Doctrine\ORM\EntityManagerInterface
@@ -57,7 +61,7 @@ class QueryHelper
              *
              * If an exception is thrown (an error is found), it will stop the process,
              * and show the error that occurred in the "try" brackets.
-             * Instead of showing the exact error that occured in the exception,
+             * Instead of showing the exact error that occurred in the exception,
              * we're gonna over-generalize the error, because you never know when
              * something nefarious may be afoot.
              */
@@ -71,7 +75,7 @@ class QueryHelper
      * @param bool $flush
      * @return void
      */
-    public function persistEntity(object $entity, bool $flush = true): void
+    public function persist(object $entity, bool $flush = true): void
     {
         $entityManager = $this->entityManager;
 
@@ -104,7 +108,7 @@ class QueryHelper
              *
              * If an exception is thrown (an error is found), it will stop the process,
              * and show the error that occurred in the "try" brackets.
-             * Instead of showing the exact error that occured in the exception,
+             * Instead of showing the exact error that occurred in the exception,
              * we're gonna over-generalize the error, because you never know when
              * something nefarious may be afoot.
              */
@@ -140,9 +144,10 @@ class QueryHelper
     /**
      * @param string $entityPath
      *
-     * @return object
+     * @return EntityManagerInterface
      */
-    public function getClassMetadata(string $entityPath){
+    public function getClassMetadata(string $entityPath)
+    {
         $entityManager = $this->entityManager;
         /**
          * this method return a class metadata object of given entity path

@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
  *
  * This file is part of the LankerdGroundworkBundle package.
@@ -9,6 +10,7 @@
  * file that was distributed with this source code.
  *
  */
+
 namespace Lankerd\GroundworkBundle\Helper;
 
 /**
@@ -60,11 +62,11 @@ interface DataHelperInterface
     public function hasOneValue(array $data, string $subjectsName = 'Entity') : object;
 
     /**
-     * @param mixed $object
+     * @param object|string $mixed Can be an object, or the full namespace of a class
      *
      * @return array
      */
-    public function getObjectProperties($mixed) : array;
+    public function getObjectProperties($mixed);
 
     /**
      * @return string
