@@ -156,6 +156,35 @@ class DataHandler
 
                         /*Check if the current $form has been submitted, and is valid.*/
                         if ($form->isSubmitted() && $form->isValid()) {
+
+                            //****ManyToMany source entity mapping type "mappedBy" this time record not insert
+                            //get current entity class all metadata
+                            $metadata = $this->queryHelper->getClassMetadata($fullEntityNamespace);
+                            //curennt entity fields loop
+                            foreach($entityFields as $fieldName => $fieldValue) {
+                                if ($metadata->hasAssociation($fieldName) && preg_match('/ManyToMany/', $metadata->reflFields[$fieldName]->getDocComment(), $matches)) {
+                                    $targetEntityProperties = $dataHelper->getObjectProperties($metadata->getAssociationMappings()[$fieldName]['targetEntity']);
+                                    $targetEntityFieldsName = $metadata->getAssociationMappings()[$fieldName]['mappedBy'];
+                                    if (!empty($targetEntityFieldsName)) {
+                                      //target entity method get "add..."
+                                      $sourceMethod = '';
+                                      foreach ($targetEntityProperties[$targetEntityFieldsName] as $smethod) {
+                                          if (false !== stripos($smethod, 'add')) {
+                                              $sourceMethod = $smethod;
+                                          }
+                                      }
+                                      //Source entity methods get "get..."
+                                      foreach ($entityProperties[$fieldName] as $method) {
+                                          if (false !== stripos($method, 'get')) {
+                                              //add records in target entity
+                                              foreach($entity->$method() as $entityFieldValue) {
+                                                $entityFieldValue->$sourceMethod($entity);
+                                              }
+                                          }
+                                      }
+                                    }
+                                }
+                            }
                             $this->globalIdentifiers[$entityUniqueIdentifier] = $entity;
                             $this->queryHelper->persistEntity($entity);
 
@@ -181,6 +210,49 @@ class DataHandler
 
                         /*Check if the current $form has been submitted, and is valid.*/
                         if ($form->isSubmitted() && $form->isValid()) {
+                            //****ManyToMany source entity mapping type "mappedBy" this time record not insert
+                            //get current entity class all metadata
+                            $metadata = $this->queryHelper->getClassMetadata($fullEntityNamespace);
+                            //curennt entity fields loop
+                            foreach($entityFields['updateRecord'] as $fieldName => $fieldValue) {
+                                if ($metadata->hasAssociation($fieldName) && preg_match('/ManyToMany/', $metadata->reflFields[$fieldName]->getDocComment(), $matches)) {
+                                    $targetEntityProperties = $dataHelper->getObjectProperties($metadata->getAssociationMappings()[$fieldName]['targetEntity']);
+                                    $targetEntityFieldsName = $metadata->getAssociationMappings()[$fieldName]['mappedBy'];
+                                    if (!empty($targetEntityFieldsName)) {
+                                      //target entity method get "add..."
+                                      $sourceMethod = $removeMethod = '';
+                                      foreach ($targetEntityProperties[$targetEntityFieldsName] as $smethod) {
+                                          if (false !== stripos($smethod, 'add')) {
+                                              $sourceMethod = $smethod;
+                                          }
+                                          if (false !== stripos($smethod, 'remove')) {
+                                              $removeMethod = $smethod;
+                                          }
+                                      }
+
+                                      $manyToManyEntityQb = $queryHelper->getEntityRepository('App:'.$this->dataHelper->singularize(ucfirst($fieldName)))->createQueryBuilder('mainEntity');
+
+                                      $manyToManyEntity = $manyToManyEntityQb->leftJoin('mainEntity.'.$targetEntityFieldsName,'joinEntity')
+                                                  ->where('joinEntity.id = :relatedValue')
+                                                  ->setParameters(array('relatedValue' => $entity[0]->getId()))
+                                                  ->getQuery()
+                                                  ->getResult();
+
+                                      foreach ($manyToManyEntity as $manyToManySingleObj) {
+                                          $manyToManySingleObj->$removeMethod($entity[0]);
+                                      }
+
+                                      foreach ($entityProperties[$fieldName] as $method) {
+                                          if (false !== stripos($method, 'get')) {
+                                              //add records in target entity
+                                              foreach($entity[0]->$method() as $entityFieldValue) {
+                                                $entityFieldValue->$sourceMethod($entity[0]);
+                                              }
+                                          }
+                                      }
+                                    }
+                                }
+                            }
                             $this->globalIdentifiers[$entityUniqueIdentifier] = $entity[0];
                             $this->queryHelper->persistEntity($entity[0]);
 
