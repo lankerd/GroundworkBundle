@@ -177,10 +177,10 @@ class DataHandler
 
                         /*Check if the current $form has been submitted, and is valid.*/
                         if ($form->isSubmitted() && $form->isValid()) {
-                          if(count($fileConfigs) > 0){
-                            $fileUpload = new FileUpload();
-                            $fileUpload->saveFiles($files,$fileConfigs);
-                          }
+                            if(count($fileConfigs) > 0){
+                              $fileUpload = new FileUpload();
+                              $fileUpload->saveFiles($files, $fileConfigs);
+                            }
                             //****ManyToMany source entity mapping type "mappedBy" this time record not insert
                             //get current entity class all metadata
                             $metadata = $this->queryHelper->getClassMetadata($fullEntityNamespace);
@@ -236,7 +236,7 @@ class DataHandler
                         if ($form->isSubmitted() && $form->isValid()) {
                             if(count($fileConfigs) > 0){
                               $fileUpload = new FileUpload();
-                              $fileUpload->saveFiles($files,$fileConfigs);
+                              $fileUpload->saveFiles($files, $fileConfigs);
                             }
                             //****ManyToMany source entity mapping type "mappedBy" this time record not insert
                             //get current entity class all metadata
@@ -524,10 +524,10 @@ class DataHandler
     {
         $files = $request->files->all();
         $data = $request->request->all();
-        if(count($files) > 0 && array_key_exists('params', $data)){
+        if(count($files) > 0 && array_key_exists('params', $data)) {
           $fileConfigs = json_decode($data['files'], true, 512, JSON_THROW_ON_ERROR);
           $params = json_decode($data['params'], true, 512, JSON_THROW_ON_ERROR);
-          $this->requestData = array('params' => $params,'fileConfig' => $fileConfigs,'files' => $files);
+          $this->requestData = array('params' => $params, 'fileConfig' => $fileConfigs, 'files' => $files);
         } elseif (array_key_exists('params', $data)) {
           $this->requestData = array('params' => json_decode($data['params'], true, 512, JSON_THROW_ON_ERROR));
         } else {
