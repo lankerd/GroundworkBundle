@@ -7,6 +7,7 @@ use DomainException;
 use Exception;
 use Lankerd\GroundworkBundle\Helper\DataHelperInterface;
 use Lankerd\GroundworkBundle\Helper\QueryHelper;
+use Lankerd\GroundworkBundle\Services\FileUpload;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Form\FormFactoryInterface;
@@ -93,12 +94,32 @@ class DataHandler
         $stopwatch = new Stopwatch();
         $stopwatch->start('transaction');
 
-        /*Store the request data into a property for re-usability purposes*/
-        $this->setRequestData($request);
-        /*Access the formatted request data, and store it in a variable for later*/
-        $data = $this->getRequestData();
-        /*Store the request data into a property for re-usability purposes*/
-        $this->indexActions($data);
+        $json = $request->getContent();
+        if(strlen($json) > 0){
+          /*Store the request data into a property for re-usability purposes*/
+          $this->setRequestData($request);
+          /*Access the formatted request data, and store it in a variable for later*/
+          $data = $this->getRequestData();
+          /*Store the request data into a property for re-usability purposes*/
+          $this->indexActions($data);
+        } else {
+          /*Store the request data into a property for re-usability purposes*/
+          $this->setCustomRequestData($request);
+          /*Access the formatted request data, and store it in a variable for later*/
+          $data = $this->getRequestData();
+          $jsonData = $fileConfigs = $files = [];
+          if(array_key_exists('params', $data)){
+            $jsonData = $data['params'];
+          }
+          if(array_key_exists('fileConfig', $data)){
+            $fileConfigs = $data['fileConfig'];
+          }
+          if(array_key_exists('files', $data)){
+            $files = $data['files'];
+          }
+          /*Store the request data into a property for re-usability purposes*/
+          $this->indexActions($jsonData, $fileConfigs, $files);
+        }
 
         $this->response['responseTime'] = $stopwatch->stop('transaction');
         return $this->response;
@@ -110,7 +131,7 @@ class DataHandler
      * actions that are supported by the
      * system.
      */
-    public function indexActions(array $data)
+    public function indexActions(array $data,array $fileConfigs = [],array $files = [])
     {
         foreach ($data['actions'] as $action => $entities) {
             $dataHelper = $this->dataHelper;
@@ -156,7 +177,10 @@ class DataHandler
 
                         /*Check if the current $form has been submitted, and is valid.*/
                         if ($form->isSubmitted() && $form->isValid()) {
-
+                            if(count($fileConfigs) > 0){
+                              $fileUpload = new FileUpload();
+                              $fileUpload->saveFiles($files, $fileConfigs);
+                            }
                             //****ManyToMany source entity mapping type "mappedBy" this time record not insert
                             //get current entity class all metadata
                             $metadata = $this->queryHelper->getClassMetadata($fullEntityNamespace);
@@ -210,6 +234,10 @@ class DataHandler
 
                         /*Check if the current $form has been submitted, and is valid.*/
                         if ($form->isSubmitted() && $form->isValid()) {
+                            if(count($fileConfigs) > 0){
+                              $fileUpload = new FileUpload();
+                              $fileUpload->saveFiles($files, $fileConfigs);
+                            }
                             //****ManyToMany source entity mapping type "mappedBy" this time record not insert
                             //get current entity class all metadata
                             $metadata = $this->queryHelper->getClassMetadata($fullEntityNamespace);
@@ -487,6 +515,24 @@ class DataHandler
         }
 
         return $form;
+    }
+
+    /**
+     * @param Request $request
+     */
+    public function setCustomRequestData(Request $request): void
+    {
+        $files = $request->files->all();
+        $data = $request->request->all();
+        if(count($files) > 0 && array_key_exists('params', $data)) {
+          $fileConfigs = json_decode($data['files'], true, 512, JSON_THROW_ON_ERROR);
+          $params = json_decode($data['params'], true, 512, JSON_THROW_ON_ERROR);
+          $this->requestData = array('params' => $params, 'fileConfig' => $fileConfigs, 'files' => $files);
+        } elseif (array_key_exists('params', $data)) {
+          $this->requestData = array('params' => json_decode($data['params'], true, 512, JSON_THROW_ON_ERROR));
+        } else {
+          $this->requestData = json_decode('', true, 512, JSON_THROW_ON_ERROR);
+        }
     }
 
     /**
