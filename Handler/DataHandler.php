@@ -20,6 +20,7 @@ use Symfony\Component\Form\Extension\Core\Type\TimeType;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Stopwatch\Stopwatch;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 /**
  * Class DataHandler
@@ -65,23 +66,31 @@ class DataHandler
     protected $response;
 
     /**
+     * @var \Symfony\Component\HttpFoundation\Session\SessionInterface
+     */
+    private $session;
+
+    /**
      * DataHandler constructor.
      *
      * @param \Lankerd\GroundworkBundle\Helper\DataHelperInterface $dataHelper
      * @param \Symfony\Component\Form\FormFactoryInterface $formFactory
      * @param \Symfony\Component\Serializer\Serializer $serializer
      * @param \Lankerd\GroundworkBundle\Helper\QueryHelper $queryHelper
+     * @param \Symfony\Component\HttpFoundation\Session\SessionInterface $session
      */
     public function __construct(
         DataHelperInterface $dataHelper,
         FormFactoryInterface $formFactory,
         Serializer $serializer,
-        QueryHelper $queryHelper
+        QueryHelper $queryHelper,
+        SessionInterface $session
     ) {
         $this->dataHelper = $dataHelper;
         $this->formFactory = $formFactory;
         $this->serializer = $serializer;
         $this->queryHelper = $queryHelper;
+        $this->session = $session;
     }
 
 
@@ -156,7 +165,7 @@ class DataHandler
                      * GET
                      */
                     if($action === 'get'){
-                        $this->globalIdentifiers[$entityUniqueIdentifier] = $this->queryHelper->getEntityRepository($fullEntityNamespace)->findBy($entityFields);
+                       $this->globalIdentifiers[$entityUniqueIdentifier] = $this->queryHelper->getEntityRepository($fullEntityNamespace)->findBy($entityFields);
                     }
 
                     /**
@@ -300,10 +309,25 @@ class DataHandler
                         }
 
                         $entity = $this->queryHelper->getEntityRepository($fullEntityNamespace)->findOneBy($entityFields['findOneBy']);
-                        if($entity != null) {
-                            $this->queryHelper->remove($entity);
-                            $this->response['code'] = 200;
-                            $this->response['message'] = $entityName . ' Removed';
+                        
+                        if ($entity != null) {
+                            if (isset($entityFields['isHardDelete'])) {
+                                $this->queryHelper->remove($entity);
+                                $this->response['code'] = 200;
+                                $this->response['message'] = $entityName . ' Removed';
+                            } else {
+                                if (method_exists($entity, 'getIsArchive')) {
+                                    $this->session->set('soft-delete-enable', true);
+                                    $entity->setIsArchive(true);
+                                    $this->queryHelper->persistEntity($entity);
+                                    $this->session->remove('soft-delete-enable');
+                                    $this->response['code'] = 200;
+                                    $this->response['message'] = $entityName . ' Removed';
+                                    //dd($entity);
+                                }  else {
+                                    throw new RuntimeException($entityName . ' entity have no field for soft delete.');           
+                                }  
+                            }
                         } else {
                             throw new RuntimeException($entityName . ' unable to delete record');
                         }
@@ -394,7 +418,6 @@ class DataHandler
     public function getter( $outputEntity, $items )
     {
         $getter = '';
-
         $vars = $this->getterVars($items);
         $includes = !empty($vars['includes']) ? $vars['includes'] : ''; unset($vars['includes']);
         $excludes = !empty($vars['excludes']) ? $vars['excludes'] : ''; unset($vars['excludes']);
@@ -407,8 +430,22 @@ class DataHandler
                 $criteria = [$key => $item];
             }
         }
+        $criteria = array_merge($criteria, ['isArchive' => 0]);   
+        $getEntityRecord =  $this->queryHelper->getEntityRepository($outputEntity)->findOneBy($criteria);
+        if (empty($getEntityRecord)) {
+            return $this->serializeFix([], $excludes, $includes);
+        } else {
+            $customArrayData = [];
+            foreach ($getEntityRecord->$getter() as $objectGetter) {
+                if (method_exists($objectGetter, 'getIsArchive') and $objectGetter->getIsArchive() == false) {
+                    $customArrayData[] = $objectGetter;
+                } else if (!method_exists($objectGetter, 'getIsArchive')) {
+                    $customArrayData[] = $objectGetter;
+                }
+            }
 
-        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findOneBy($criteria)->$getter(), $excludes, $includes);
+            return $this->serializeFix($customArrayData, $excludes, $includes);  
+        }        
     }
 
     public function find( $outputEntity, $items )
@@ -417,7 +454,17 @@ class DataHandler
         $includes = !empty($vars['includes']) ? $vars['includes'] : ''; unset($vars['includes']);
         $excludes = !empty($vars['excludes']) ? $vars['excludes'] : ''; unset($vars['excludes']);
 
-        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->find($vars['id']), $excludes, $includes);
+        return $this->serializeFix($this->findByCustom($outputEntity, ['id' => $vars['id']]), $excludes, $includes);
+    }
+
+    public function findByCustom($outputEntity, $criteria = null)
+    {
+        $archiveArray = ['isArchive' => 0];
+        if (is_array($criteria)){
+            return $this->queryHelper->getEntityRepository($outputEntity)->findOneBy(array_merge($criteria, $archiveArray));
+        } else {
+            return $this->queryHelper->getEntityRepository($outputEntity)->findBy($archiveArray);
+        }       
     }
 
     public function findOneBy( $outputEntity, $items )
@@ -427,8 +474,8 @@ class DataHandler
         $excludes = !empty($vars['excludes']) ? $vars['excludes'] : ''; unset($vars['excludes']);
 
         $orderBy = !empty($vars['orderBy']) ? $vars['orderBy'] : []; unset($vars['orderBy']);
-
-        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findOneBy($vars['criteria'], $orderBy), $excludes, $includes);
+        $criteria = array_merge($vars['criteria'], ['isArchive' => 0]);
+        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findOneBy($criteria, $orderBy), $excludes, $includes);
     }
 
     public function findAll( $outputEntity, $items )
@@ -437,7 +484,7 @@ class DataHandler
         $includes = !empty($vars['includes']) ? $vars['includes'] : ''; unset($vars['includes']);
         $excludes = !empty($vars['excludes']) ? $vars['excludes'] : ''; unset($vars['excludes']);
 
-        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findAll(), $excludes, $includes);
+        return $this->serializeFix($this->findByCustom($outputEntity), $excludes, $includes);
     }
 
     public function findBy( $outputEntity, $items )
@@ -450,7 +497,8 @@ class DataHandler
         $limit = !empty($vars['limit']) ? $vars['limit'] : null; unset($vars['limit']);
         $offset = !empty($vars['offset']) ? $vars['offset'] : 0; unset($vars['offset']);
 
-        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findBy($vars['criteria'], $orderBy, $limit, $offset), $excludes, $includes);
+        $criteria = array_merge($vars['criteria'], ['isArchive' => 0]);
+        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findBy($criteria, $orderBy, $limit, $offset), $excludes, $includes);
     }
 
     public function serializeFix( $object, $excludes = [], $includes = [] )
