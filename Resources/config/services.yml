@@ -17,7 +17,7 @@ services:
         arguments: ['@doctrine.orm.entity_manager']
 
     Lankerd\GroundworkBundle\Handler\DataHandler:
-        arguments: ['@lankerd_groundwork.helper.data_helper', '@form.factory', '@serializer', '@Lankerd\GroundworkBundle\Helper\QueryHelper']
+        arguments: ['@lankerd_groundwork.helper.data_helper', '@form.factory', '@serializer', '@Lankerd\GroundworkBundle\Helper\QueryHelper','@session']
 
     lankerd_groundwork.serializer.circular_reference_handler:
         class: Lankerd\GroundworkBundle\Serializer\CircularReferenceHandler
