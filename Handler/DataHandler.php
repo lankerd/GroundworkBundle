@@ -222,6 +222,7 @@ class DataHandler
                             $this->queryHelper->persistEntity($entity);
 
                             $this->response['data']['responseId'] = $entity->getId();
+                            $this->response['data'][lcfirst($entityName).'Id'] = $entity->getId();
                             $this->response['code'] = 200;
                             $this->response['message'] = $entityName . ' Created';
                         }else{
