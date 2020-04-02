@@ -91,9 +91,9 @@ class QueryHelper
      * @param object $entity
      *
      * @param bool $flush
-     * @return array
+     * @return void
      */
-    public function persistEntity(object $entity, bool $flush = true): array
+    public function persistEntity(object $entity, bool $flush = true): void
     {
         $entityManager = $this->entityManager;
 

@@ -1,6 +1,8 @@
 # Managed by Composer
 /vendor/
 
+.idea
+
 # Composer PHAR
 /composer.phar
 /composer.lock
