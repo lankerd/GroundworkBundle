@@ -221,6 +221,8 @@ class DataHandler
                             $this->globalIdentifiers[$entityUniqueIdentifier] = $entity;
                             $this->queryHelper->persistEntity($entity);
 
+                            $this->response['created'][lcfirst($entityName).'Id'] = true;
+
                             $this->response['data']['responseId'] = $entity->getId();
                             $this->response['data'][lcfirst($entityName).'Id'] = $entity->getId();
                             $this->response['code'] = 200;
@@ -294,6 +296,14 @@ class DataHandler
                             $this->globalIdentifiers[$entityUniqueIdentifier] = $entity[0];
                             $this->queryHelper->persistEntity($entity[0]);
 
+                            $updates = $this->queryHelper->getUpdates();
+                            $this->response['updates'][$entityUniqueIdentifier] = [
+                                'count'=>  sizeof($updates),
+                                'fields' => $updates,
+                                'entityName' => $entityName,
+                                'entityId'=> $entity[0]->getId()
+                            ];
+
                             $this->response['code'] = 200;
                             $this->response['message'] = $entityName . ' Updated';
                         }else{
@@ -316,6 +326,8 @@ class DataHandler
                                 $this->queryHelper->remove($entity);
                                 $this->response['code'] = 200;
                                 $this->response['message'] = $entityName . ' Removed';
+                                
+                                $this->response['removed'] = ['type'=>  'hard', 'entityName' => $entityName];
                             } else {
                                 if (method_exists($entity, 'getIsArchive')) {
                                     $this->session->set('soft-delete-enable', true);
@@ -324,7 +336,13 @@ class DataHandler
                                     $this->session->remove('soft-delete-enable');
                                     $this->response['code'] = 200;
                                     $this->response['message'] = $entityName . ' Removed';
-                                    //dd($entity);
+
+                                    $this->response['removed'] = [
+                                        'type'=>  'soft',
+                                        'entityName' => $entityName,
+                                        'entityId' => $entity->getId(),
+                                    ];
+
                                 }  else {
                                     throw new RuntimeException($entityName . ' entity have no field for soft delete.');           
                                 }  
