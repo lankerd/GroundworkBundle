@@ -326,6 +326,8 @@ class DataHandler
                                 $this->queryHelper->remove($entity);
                                 $this->response['code'] = 200;
                                 $this->response['message'] = $entityName . ' Removed';
+                                
+                                $this->response['removed'] = ['type'=>  'hard', 'entityName' => $entityName];
                             } else {
                                 if (method_exists($entity, 'getIsArchive')) {
                                     $this->session->set('soft-delete-enable', true);
@@ -334,7 +336,13 @@ class DataHandler
                                     $this->session->remove('soft-delete-enable');
                                     $this->response['code'] = 200;
                                     $this->response['message'] = $entityName . ' Removed';
-                                    //dd($entity);
+
+                                    $this->response['removed'] = [
+                                        'type'=>  'soft',
+                                        'entityName' => $entityName,
+                                        'entityId' => $entity->getId(),
+                                    ];
+
                                 }  else {
                                     throw new RuntimeException($entityName . ' entity have no field for soft delete.');           
                                 }  
