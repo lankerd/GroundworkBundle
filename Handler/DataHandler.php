@@ -221,6 +221,8 @@ class DataHandler
                             $this->globalIdentifiers[$entityUniqueIdentifier] = $entity;
                             $this->queryHelper->persistEntity($entity);
 
+                            $this->response['created'][lcfirst($entityName).'Id'] = true;
+
                             $this->response['data']['responseId'] = $entity->getId();
                             $this->response['data'][lcfirst($entityName).'Id'] = $entity->getId();
                             $this->response['code'] = 200;
@@ -292,8 +294,9 @@ class DataHandler
                                 }
                             }
                             $this->globalIdentifiers[$entityUniqueIdentifier] = $entity[0];
-                            $updates = $this->queryHelper->persistEntity($entity[0]);
+                            $this->queryHelper->persistEntity($entity[0]);
 
+                            $updates = $this->queryHelper->getUpdates();
                             $this->response['updates'][$entityUniqueIdentifier] = [
                                 'count'=>  sizeof($updates),
                                 'fields' => $updates,

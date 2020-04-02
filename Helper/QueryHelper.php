@@ -32,7 +32,7 @@ class QueryHelper
     /**
      * @var array
      */
-    public $updates;
+    public $updates = [];
 
     /**
      * @return array
@@ -112,7 +112,7 @@ class QueryHelper
             $entityManager->persist($entity);
             $uow = $entityManager->getUnitOfWork();
             $uow->computeChangeSets();
-            $updates = $uow->getEntityChangeSet($entity);
+            $this->setUpdates($uow->getEntityChangeSet($entity));
             if ($flush){
                 /**
                  * Using Flush() causes write operations against the
@@ -122,7 +122,6 @@ class QueryHelper
                  * into the Database.
                  */
                 $entityManager->flush();
-                return $updates;
             }
         } catch (Exception $e) {
             /**
