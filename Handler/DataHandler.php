@@ -292,7 +292,14 @@ class DataHandler
                                 }
                             }
                             $this->globalIdentifiers[$entityUniqueIdentifier] = $entity[0];
-                            $this->queryHelper->persistEntity($entity[0]);
+                            $updates = $this->queryHelper->persistEntity($entity[0]);
+
+                            $this->response['updates'][$entityUniqueIdentifier] = [
+                                'count'=>  sizeof($updates),
+                                'fields' => $updates,
+                                'entityName' => $entityName,
+                                'entityId'=> $entity[0]->getId()
+                            ];
 
                             $this->response['code'] = 200;
                             $this->response['message'] = $entityName . ' Updated';

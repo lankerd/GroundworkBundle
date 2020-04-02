@@ -30,6 +30,27 @@ class QueryHelper
     protected $entityManager;
 
     /**
+     * @var array
+     */
+    public $updates;
+
+    /**
+     * @return array
+     */
+    public function getUpdates(): array
+    {
+        return $this->updates;
+    }
+
+    /**
+     * @param array $updates
+     */
+    public function setUpdates(array $updates): void
+    {
+        $this->updates = $updates;
+    }
+
+    /**
      * QueryHelper constructor.
      *
      * @param \Doctrine\ORM\EntityManagerInterface $entityManager
@@ -38,6 +59,7 @@ class QueryHelper
     {
         $this->entityManager = $entityManager;
     }
+
 
     /**
      * @param object $entity
@@ -69,9 +91,9 @@ class QueryHelper
      * @param object $entity
      *
      * @param bool $flush
-     * @return void
+     * @return array
      */
-    public function persistEntity(object $entity, bool $flush = true): void
+    public function persistEntity(object $entity, bool $flush = true): array
     {
         $entityManager = $this->entityManager;
 
@@ -88,6 +110,9 @@ class QueryHelper
              * available for doctrine to submit to the Database.
              */
             $entityManager->persist($entity);
+            $uow = $entityManager->getUnitOfWork();
+            $uow->computeChangeSets();
+            $updates = $uow->getEntityChangeSet($entity);
             if ($flush){
                 /**
                  * Using Flush() causes write operations against the
@@ -97,6 +122,7 @@ class QueryHelper
                  * into the Database.
                  */
                 $entityManager->flush();
+                return $updates;
             }
         } catch (Exception $e) {
             /**
