@@ -2,6 +2,7 @@
 /vendor/
 
 .idea
+.idea/
 
 # Composer PHAR
 /composer.phar
