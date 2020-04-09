@@ -221,8 +221,10 @@ class DataHandler
                             $this->globalIdentifiers[$entityUniqueIdentifier] = $entity;
                             $this->queryHelper->persistEntity($entity);
 
-                            $this->response['created'][lcfirst($entityName).'Id'] = true;
-
+                            $this->response['created'][$entityUniqueIdentifier] = [
+                                'entityName' => $entityName,
+                                'entityId'=> $entity[0]->getId()
+                            ];
                             $this->response['data']['responseId'] = $entity->getId();
                             $this->response['data'][lcfirst($entityName).'Id'] = $entity->getId();
                             $this->response['code'] = 200;
