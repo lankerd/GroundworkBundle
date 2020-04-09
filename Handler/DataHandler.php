@@ -223,7 +223,7 @@ class DataHandler
 
                             $this->response['created'][$entityUniqueIdentifier] = [
                                 'entityName' => $entityName,
-                                'entityId'=> $entity[0]->getId()
+                                'entityId'=> $entity->getId()
                             ];
                             $this->response['data']['responseId'] = $entity->getId();
                             $this->response['data'][lcfirst($entityName).'Id'] = $entity->getId();
