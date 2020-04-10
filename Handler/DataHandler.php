@@ -298,7 +298,7 @@ class DataHandler
                             $this->globalIdentifiers[$entityUniqueIdentifier] = $entity[0];
                             $this->queryHelper->persistEntity($entity[0]);
 
-                            if( $entityFields['bot'] === true) {
+                            if(isset($entityFields['bot']) && $entityFields['bot'] === true) {
                                 /* TODO: Put in serializer for $updates in fields key */
                                 $updates = $this->queryHelper->getUpdates();
                                 $this->response['updates'][$entityUniqueIdentifier] = [
