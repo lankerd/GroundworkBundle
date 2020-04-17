@@ -30,7 +30,9 @@
 		"doctrine/inflector": "^1.0",
 		"ext-json": "*",
         "jms/serializer-bundle": "^3.5@dev",
-        "symfony/stopwatch": "*"
+        "symfony/stopwatch": "*",
+		"michaeldegroot/doctrine-encrypt-bundle": "*",
+		"defuse/php-encryption": "*"
 	},
 	"minimum-stability": "dev"
 }
