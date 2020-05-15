@@ -53,5 +53,5 @@ Create configuration `lankerd.yml` file in `config/packages`
         isArchive: false
 ```
 
-For not soft delete set `isArchive` `false` in configuration like above.
+To turn off soft delete set `isArchive` `false` in configuration like above.
 Default is `true`
