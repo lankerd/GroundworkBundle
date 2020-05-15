@@ -43,3 +43,15 @@ return [
     Lankerd\GroundworkBundle\LankerdGroundworkBundle::class => ['all' => true],
 ];
 ```
+
+### Step 3: Create configuration file 
+
+Create configuration `lankerd.yml` file in `config/packages`
+
+```yaml
+    parameters:
+        isArchive: false
+```
+
+For not soft delete set `isArchive` `false` in configuration like above.
+Default is `true`
