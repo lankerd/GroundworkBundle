@@ -314,6 +314,7 @@ class DataHandler
                                 'entityId' => $entity[0]->getId(),
                             ];
 
+
                             $this->response['code'] = 200;
                             $this->response['message'] = $entityName . ' Updated';
                         } else {
@@ -337,6 +338,7 @@ class DataHandler
                                 $this->response['code'] = 200;
                                 $this->response['message'] = $entityName . ' Removed';
                                 $this->response['removed'] = ['type' => 'hard', 'entityName' => $entityName];
+
                             } else {
                                 if ($this->params->get('isArchive') && method_exists($entity, 'getIsArchive')) {
                                     $this->session->set('soft-delete-enable', true);
@@ -447,9 +449,16 @@ class DataHandler
                                     }
 
                                     $customFunction = $items['functionName'];
-                                    $includes = !empty($items['includes']) ? $items['includes'] : '';unset($items['includes']);
-                                    $excludes = !empty($items['excludes']) ? $items['excludes'] : '';unset($items['excludes']);
-                                    $entityResults[$items['get']] = $this->serializeFix($this->queryHelper->getEntityRepository($dataHelper::ENTITY_NAMESPACE . $outputEntity)->$customFunction($items['criteria']), $excludes, $includes);
+
+                                    $includes = !empty($items['includes']) ? $items['includes'] : ''; unset($items['includes']);
+                                    $excludes = !empty($items['excludes']) ? $items['excludes'] : ''; unset($items['excludes']);
+                                    if(array_key_exists('serialize', $items) && $items['serialize'] === false){
+                                        $entityResults[$items['get']] = $this->queryHelper->getEntityRepository($dataHelper::ENTITY_NAMESPACE.$outputEntity)->$customFunction($items['criteria']);
+                                    }
+                                    else {
+                                        $entityResults[$items['get']] =  $this->serializeFix($this->queryHelper->getEntityRepository($dataHelper::ENTITY_NAMESPACE.$outputEntity)->$customFunction($items['criteria']), $excludes, $includes);
+
+                                    }
                                 }
                             }
                         }
