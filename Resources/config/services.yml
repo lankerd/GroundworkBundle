@@ -1,3 +1,6 @@
+parameters:
+    isArchive: true
+
 services:
     lankerd_groundwork.twig.custom_extension:
         class: Lankerd\GroundworkBundle\Twig\GroundworkTwig
