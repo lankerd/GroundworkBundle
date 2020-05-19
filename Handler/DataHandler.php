@@ -546,27 +546,66 @@ class DataHandler
     public function findAll($outputEntity, $items)
     {
         $vars = $this->getterVars($items);
-        $includes = !empty($vars['includes']) ? $vars['includes'] : '';unset($vars['includes']);
-        $excludes = !empty($vars['excludes']) ? $vars['excludes'] : '';unset($vars['excludes']);
+        $includes = !empty($vars['includes']) ? $vars['includes'] : ''; unset($vars['includes']);
+        $excludes = !empty($vars['excludes']) ? $vars['excludes'] : ''; unset($vars['excludes']);
+        $orderBy = !empty($vars['orderBy']) ? $vars['orderBy'] : []; unset($vars['orderBy']);
 
-        return $this->serializeFix($this->findByCustom($outputEntity), $excludes, $includes);
+        $limit = !empty($vars['limit']) ? $vars['limit'] : null; unset($vars['limit']);
+        $page = !empty($vars['page']) ? $vars['page'] : 0; unset($vars['page']);
+
+        $archiveArray = [];
+        if ($this->params->get('isArchive')) {
+            $archiveArray = ['isArchive' => 0];
+        }
+
+        if($limit && $page){
+            $offset = ($page - 1) * $limit;
+            $queryWithLimit = $this->queryHelper->getEntityRepository($outputEntity)->findBy($archiveArray, $orderBy, $limit, $offset);
+            $rowCounts = count($this->queryHelper->getEntityRepository($outputEntity)->findBy($archiveArray));
+
+            $this->response['pagination']['totalRecords'] = $rowCounts;
+            $this->response['pagination']['currentPage'] = $page;
+            $this->response['pagination']['nextPage'] = $rowCounts > ($offset+$limit) ? $page + 1 : 0;
+            $this->response['pagination']['previousPage'] = $page - 1;
+            $this->response['pagination']['totalPages'] = (int)ceil($rowCounts / $limit);
+        } else {
+            $queryWithLimit =  $this->queryHelper->getEntityRepository($outputEntity)->findBy($archiveArray);
+        }
+
+        return $this->serializeFix($queryWithLimit, $excludes, $includes);
     }
 
     public function findBy($outputEntity, $items)
     {
         $vars = $this->getterVars($items);
-        $includes = !empty($vars['includes']) ? $vars['includes'] : '';unset($vars['includes']);
-        $excludes = !empty($vars['excludes']) ? $vars['excludes'] : '';unset($vars['excludes']);
+        $includes = !empty($vars['includes']) ? $vars['includes'] : ''; unset($vars['includes']);
+        $excludes = !empty($vars['excludes']) ? $vars['excludes'] : ''; unset($vars['excludes']);
 
-        $orderBy = !empty($vars['orderBy']) ? $vars['orderBy'] : [];unset($vars['orderBy']);
-        $limit = !empty($vars['limit']) ? $vars['limit'] : null;unset($vars['limit']);
-        $offset = !empty($vars['offset']) ? $vars['offset'] : 0;unset($vars['offset']);
+        $orderBy = !empty($vars['orderBy']) ? $vars['orderBy'] : []; unset($vars['orderBy']);
+
+        $limit = !empty($vars['limit']) ? $vars['limit'] : null; unset($vars['limit']);
+        $page = !empty($vars['page']) ? $vars['page'] : 0; unset($vars['page']);
+
         if ($this->params->get('isArchive')) {
             $criteria = array_merge($vars['criteria'], ['isArchive' => 0]);
         } else {
             $criteria = $vars['criteria'];
         }
-        return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findBy($criteria, $orderBy, $limit, $offset), $excludes, $includes);
+
+        if($limit && $page){
+            $offset = ($page - 1) * $limit;
+            $queryWithLimit = $this->queryHelper->getEntityRepository($outputEntity)->findBy($criteria, $orderBy, $limit, $offset);
+            $rowCounts = count($this->queryHelper->getEntityRepository($outputEntity)->findBy($criteria, $orderBy));
+            $this->response['pagination']['totalRecords'] = $rowCounts;
+            $this->response['pagination']['currentPage'] = $page;
+            $this->response['pagination']['nextPage'] = $rowCounts > ($offset+$limit) ? $page + 1 : 0;
+            $this->response['pagination']['previousPage'] = $page - 1;
+            $this->response['pagination']['totalPages'] = (int)ceil($rowCounts / $limit);
+        } else {
+            $queryWithLimit = $this->queryHelper->getEntityRepository($outputEntity)->findBy($criteria, $orderBy, $limit, $offset = null);
+        }
+
+        return $this->serializeFix($queryWithLimit, $excludes, $includes);
     }
 
     public function serializeFix($object, $excludes = [], $includes = [])
