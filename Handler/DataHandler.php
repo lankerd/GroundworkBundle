@@ -429,7 +429,7 @@ class DataHandler
                                     if(array_key_exists('serialize', $items) && $items['serialize'] === false){
                                         $entityResults[$items['get']] = $this->queryHelper->getEntityRepository($dataHelper::ENTITY_NAMESPACE.$outputEntity)->$customFunction($items['criteria']);
                                     }
-                                    if(array_key_exists('serialize', $items['criteria']) && $items['criteria']['serialize'] === false){
+                                    else if(array_key_exists('serialize', $items['criteria']) && $items['criteria']['serialize'] === false){
                                         $entityResults[$items['get']] = $this->queryHelper->getEntityRepository($dataHelper::ENTITY_NAMESPACE.$outputEntity)->$customFunction($items['criteria']);
                                     }
                                     else {
