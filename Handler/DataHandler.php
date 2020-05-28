@@ -426,7 +426,7 @@ class DataHandler
                                     $customFunction = $items['functionName'];
                                     $includes = !empty($items['includes']) ? $items['includes'] : ''; unset($items['includes']);
                                     $excludes = !empty($items['excludes']) ? $items['excludes'] : ''; unset($items['excludes']);
-                                    if(array_key_exists('serialize', $items) && $items['serialize'] === false || array_key_exists('serialize', $items['criteria']) && $items['criteria']['serialize'] === false){
+                                    if( (array_key_exists('serialize', $items) && $items['serialize'] === false) || (array_key_exists('serialize', $items['criteria']) && $items['criteria']['serialize'] === false) ){
                                         $entityResults[$items['get']] = $this->queryHelper->getEntityRepository($dataHelper::ENTITY_NAMESPACE.$outputEntity)->$customFunction($items['criteria']);
                                     }
                                     else {
