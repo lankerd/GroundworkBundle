@@ -488,6 +488,7 @@ class DataHandler
             $criteria = array_merge($criteria, ['isArchive' => 0]);
         }
 
+        $criteria = $this->fixCriteriaFields($outputEntity, $criteria);
         $getEntityRecord = $this->queryHelper->getEntityRepository($outputEntity)->findOneBy($criteria);
         if (empty($getEntityRecord)) {
             return $this->serializeFix([], $excludes, $includes);
@@ -522,6 +523,7 @@ class DataHandler
             $archiveArray = ['isArchive' => 0];
         }
         if (is_array($criteria)) {
+            $criteria = $this->fixCriteriaFields($outputEntity, $criteria);
             return $this->queryHelper->getEntityRepository($outputEntity)->findOneBy(array_merge($criteria, $archiveArray));
         } else {
             return $this->queryHelper->getEntityRepository($outputEntity)->findBy($archiveArray);
@@ -540,6 +542,9 @@ class DataHandler
         } else {
             $criteria = $vars['criteria'];
         }
+
+        $criteria = $this->fixCriteriaFields($outputEntity, $criteria);
+
         return $this->serializeFix($this->queryHelper->getEntityRepository($outputEntity)->findOneBy($criteria, $orderBy), $excludes, $includes);
     }
 
@@ -591,6 +596,8 @@ class DataHandler
         } else {
             $criteria = $vars['criteria'];
         }
+
+        $criteria = $this->fixCriteriaFields($outputEntity, $criteria);
 
         if($limit && $page){
             $offset = ($page - 1) * $limit;
@@ -645,6 +652,24 @@ class DataHandler
         }
 
         return $return;
+    }
+
+    public function fixCriteriaFields($entity, $criteria)
+    {
+        if ( !is_array($criteria) )
+            return $criteria;
+        $c = new $entity;
+        $class = $this->queryHelper->getClassMetadata(get_class($c));
+        foreach ($criteria as $field => $value) {
+            if ($class->hasAssociation($field))
+                continue;
+            $fieldArray = $class->getFieldMapping($field);
+            if ($fieldArray['type'] == 'time'
+                || $fieldArray['type'] == 'date'
+                || $fieldArray['type'] == 'datetime')
+                $criteria[$field] = new \DateTime($value);
+        }
+        return $criteria;
     }
 
     public function dynamicForm($entity, $data)
