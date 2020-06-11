@@ -153,6 +153,7 @@ class DataHandler
         foreach ($data['actions'] as $action => $entities) {
             $dataHelper = $this->dataHelper;
             $queryHelper = $this->queryHelper;
+            $entityResults = [];
 
             /**
              * LOAD ORDER
@@ -461,6 +462,7 @@ class DataHandler
                                     }
                                 }
                             }
+                            unset($data['actions']['response'][$outputEntity]);
                         }
                         $this->response['data'] = $entityResults;
                     }
