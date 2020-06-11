@@ -394,7 +394,6 @@ class DataHandler
                      * OUTPUT
                      */
                     if ($action === 'response') {
-                        $entityResults = [];
                         foreach ($data['actions']['response'] as $outputEntity => $request) {
                             foreach ($request as $key => $items) {
                                 if ($key === 'getter') {
