@@ -167,7 +167,6 @@ class DataHandler
 
             foreach ($entities as $entityName => $entityCollection) {
                 $fullEntityNamespace = $dataHelper::ENTITY_NAMESPACE . $entityName;
-                $entityProperties = $dataHelper->getObjectProperties($fullEntityNamespace);
 
                 foreach ($entityCollection as $entityUniqueIdentifier => $entityFields) {
                     /**
@@ -202,6 +201,7 @@ class DataHandler
                             //****ManyToMany source entity mapping type "mappedBy" this time record not insert
                             //get current entity class all metadata
                             $metadata = $this->queryHelper->getClassMetadata($fullEntityNamespace);
+                            $entityProperties = $dataHelper->getObjectProperties($fullEntityNamespace);
                             //curennt entity fields loop
                             foreach ($entityFields as $fieldName => $fieldValue) {
                                 if ($metadata->hasAssociation($fieldName) && preg_match('/ManyToMany/', $metadata->reflFields[$fieldName]->getDocComment(), $matches)) {
@@ -264,6 +264,7 @@ class DataHandler
                             //****ManyToMany source entity mapping type "mappedBy" this time record not insert
                             //get current entity class all metadata
                             $metadata = $this->queryHelper->getClassMetadata($fullEntityNamespace);
+                            $entityProperties = $dataHelper->getObjectProperties($fullEntityNamespace);
                             //curennt entity fields loop
                             foreach ($entityFields['updateRecord'] as $fieldName => $fieldValue) {
                                 if ($metadata->hasAssociation($fieldName) && preg_match('/ManyToMany/', $metadata->reflFields[$fieldName]->getDocComment(), $matches)) {
@@ -368,6 +369,7 @@ class DataHandler
                      */
                     if ($action === 'connect') {
                         $entityMetadata = $this->queryHelper->getClassMetadata($fullEntityNamespace);
+                        $entityProperties = $dataHelper->getObjectProperties($fullEntityNamespace);
                         $entity = $this->globalIdentifiers[$entityUniqueIdentifier];
                         foreach ($entityFields as $fieldName => $fieldValue) {
                             if ($entityMetadata->hasAssociation($fieldName)) {
