@@ -3,6 +3,10 @@ declare (strict_types = 1);
 
 namespace Lankerd\GroundworkBundle\Handler;
 
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Criteria;
+use Doctrine\ORM\EntityRepository;
 use DomainException;
 use Exception;
 use Lankerd\GroundworkBundle\Helper\DataHelperInterface;
@@ -602,9 +606,25 @@ class DataHandler
 
         $criteria = $this->fixCriteriaFields($outputEntity, $criteria);
 
+        /** @var ServiceEntityRepository $repo */
+        $repo = $this->queryHelper->getEntityRepository($outputEntity);
+
         if($limit && $page){
             $offset = ($page - 1) * $limit;
-            $queryWithLimit = $this->queryHelper->getEntityRepository($outputEntity)->findBy($criteria, $orderBy, $limit, $offset);
+
+            if (isset($vars['matching'])) {
+                $queryWithLimit = $this->createQuery($repo, $criteria, $vars['matching'])
+                    ->setFirstResult($offset)
+                    ->setMaxResults($limit);
+
+                foreach ($orderBy as $field => $dir) {
+                    $queryWithLimit->addOrderBy('e.' . $field, $dir);
+                }
+
+                $queryWithLimit = $queryWithLimit->getQuery()->getResult();
+            } else
+                $queryWithLimit = $this->queryHelper->getEntityRepository($outputEntity)->findBy($criteria, $orderBy, $limit, $offset);
+
             $rowCounts = count($this->queryHelper->getEntityRepository($outputEntity)->findBy($criteria, $orderBy));
             $this->response['pagination']['totalRecords'] = $rowCounts;
             $this->response['pagination']['currentPage'] = $page;
@@ -612,10 +632,69 @@ class DataHandler
             $this->response['pagination']['previousPage'] = $page - 1;
             $this->response['pagination']['totalPages'] = (int)ceil($rowCounts / $limit);
         } else {
-            $queryWithLimit = $this->queryHelper->getEntityRepository($outputEntity)->findBy($criteria, $orderBy, $limit, $offset = null);
+            if (isset($vars['matching'])) {
+                $queryWithLimit = $this->createQuery($repo, $criteria, $vars['matching']);
+
+                foreach ($orderBy as $field => $dir) {
+                    $queryWithLimit->addOrderBy('e.' . $field, $dir);
+                }
+
+                $queryWithLimit = $queryWithLimit->getQuery()->getResult();
+            } else
+                $queryWithLimit = $repo->findBy($criteria, $orderBy, $limit, $offset = null);
         }
 
         return $this->serializeFix($queryWithLimit, $excludes, $includes);
+    }
+
+    public function createQuery(ServiceEntityRepository $repo, $criteria, $matching)
+    {
+        $q = $repo
+            ->createQueryBuilder('e')
+            ->select('e')
+        ;
+        $c = Criteria::create();
+        $b = Criteria::expr();
+
+        $rules = array_merge($criteria, $matching);
+
+        foreach ($rules as $field => $rule) {
+            $expr = 'eq';
+
+            if (is_array($rule)) {
+                if (isset($rule['between'])) {
+                    $c->andWhere(
+                        $b->gte($field, new \DateTime($rule['between'][0]), \Doctrine\DBAL\Types\Types::DATE_MUTABLE)
+                    );
+                    $c->andWhere(
+                        $b->lte($field, new \DateTime($rule['between'][1]), \Doctrine\DBAL\Types\Types::DATE_MUTABLE)
+                    );
+
+                    continue;
+                } else {
+                    foreach ($rule as $expr => $v) {
+                        if (method_exists($b, $expr))
+                            $c->andWhere(
+                                $b->{$expr}($field, $v)
+                            );
+                        else
+                            $c->andWhere(
+                                $b->in($field, $v)
+                            );
+                    }
+
+                    continue;
+                }
+            }
+
+            $c->andWhere(
+                Criteria::expr()->{$expr}($field, $rule)
+            );
+        }
+
+        $q->addCriteria($c);
+
+        return $q;
     }
 
     public function serializeFix($object, $excludes = [], $includes = [])
@@ -765,10 +844,10 @@ class DataHandler
         }
         /*Instantiate a new User object for us to insert the $request form data into.*/
         if (count(
-            $entity = $this->queryHelper->getEntityRepository($dataHelper->getClassPath())->findBy(
-                $data['targetEntity']
-            )
-        ) === 1) {
+                $entity = $this->queryHelper->getEntityRepository($dataHelper->getClassPath())->findBy(
+                    $data['targetEntity']
+                )
+            ) === 1) {
             $entity = $entity[0];
         } else {
             throw new RuntimeException(
