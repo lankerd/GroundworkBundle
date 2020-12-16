@@ -419,6 +419,12 @@ class DataHandler
                                     $entityResults[$items['get']] = $this->find($dataHelper::ENTITY_NAMESPACE . $outputEntity, $items);
                                 }
 
+                                if ($outputEntity === 'findLastInserted') {
+                                    $entity = $this->globalIdentifiers[$key];
+                                    $entityName = get_class($entity);
+                                    $entityResults['lastInserted'] = $this->find($entityName, ['id'=>$entity->getId(),'includes'=>$items]);
+                                }
+
                                 // findOneBy(array $criteria, array $orderBy = null)
                                 if ($key === 'findOneBy') {
                                     if (!isset($items['criteria'])) {
