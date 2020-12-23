@@ -7,6 +7,7 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Criteria;
 use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\Mapping\ClassMetadata;
 use DomainException;
 use Exception;
 use Lankerd\GroundworkBundle\Helper\DataHelperInterface;
@@ -655,6 +656,9 @@ class DataHandler
 
     public function createQuery(ServiceEntityRepository $repo, $criteria, $matching)
     {
+        /** @var ClassMetadata $metadata */
+        $metadata = $this->queryHelper->getClassMetadata($repo->getClassName());
+
         $q = $repo
             ->createQueryBuilder('e')
             ->select('e')
@@ -666,6 +670,17 @@ class DataHandler
 
         foreach ($rules as $field => $rule) {
             $expr = 'eq';
+
+            if ($metadata->hasAssociation($field) && $metadata->isCollectionValuedAssociation($field)) {
+                $joinTable = $metadata->getAssociationMapping($field)['joinTable'];
+
+                if ($joinTable) {
+                    $joinColumn = $joinTable['joinColumns'][0]['referencedColumnName'];
+                    $alias = $field[0] . $field[1];
+                    $q->innerJoin('e.' . $field, $alias);
+                    $field = $alias . '.' . $joinColumn;
+                }
+            }
 
             if (is_array($rule)) {
                 if (isset($rule['between'])) {
