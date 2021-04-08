@@ -256,7 +256,14 @@ class DataHandler
                             throw new RuntimeException($entityName . ' was not able to find records to update.');
                         };
 
-                        $entity = $this->queryHelper->getEntityRepository($fullEntityNamespace)->findBy($entityFields['findBy']);
+//                        $entity = $this->queryHelper->getEntityRepository($fullEntityNamespace)->findBy($entityFields['findBy']);
+                        $entity = $this->findBy($fullEntityNamespace, [
+                            'criteria' => $entityFields['findBy'],
+                            'matching' => $entityFields['matching'] ?? null,
+                            'includes' => $entityFields['includes'] ?? null,
+                            'excludes' => $entityFields['excludes'] ?? null,
+                        ], false);
+
                         $form = $this->dynamicForm($entity[0], $entityFields['updateRecord']);
                         $form->submit($entityFields['updateRecord']);
 
@@ -594,7 +601,7 @@ class DataHandler
         return $this->serializeFix($queryWithLimit, $excludes, $includes);
     }
 
-    public function findBy($outputEntity, $items)
+    public function findBy($outputEntity, $items, $serialize = true)
     {
         $vars = $this->getterVars($items);
         $includes = !empty($vars['includes']) ? $vars['includes'] : ''; unset($vars['includes']);
@@ -639,7 +646,7 @@ class DataHandler
             $this->response['pagination']['previousPage'] = $page - 1;
             $this->response['pagination']['totalPages'] = (int)ceil($rowCounts / $limit);
         } else {
-            if (isset($vars['matching'])) {
+            if (isset($vars['matching']) && !empty($vars['matching'])) {
                 $queryWithLimit = $this->createQuery($repo, $criteria, $vars['matching']);
 
                 foreach ($orderBy as $field => $dir) {
@@ -650,6 +657,9 @@ class DataHandler
             } else
                 $queryWithLimit = $repo->findBy($criteria, $orderBy, $limit, $offset = null);
         }
+
+        if (!$serialize)
+            return $queryWithLimit;
 
         return $this->serializeFix($queryWithLimit, $excludes, $includes);
     }
