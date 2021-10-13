@@ -17,6 +17,7 @@ use RuntimeException;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\TimeType;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -244,7 +245,7 @@ class DataHandler
                             $this->response['code'] = 200;
                             $this->response['message'] = $entityName . ' Created';
                         } else {
-                            throw new RuntimeException($entityName . ' had an Error. ' . $form->getErrors()->current()->getMessage());
+                            throw new RuntimeException($entityName . ' had an Error. ' . $form->getErrors(true, true)->current()->getMessage());
                         }
                     }
 
@@ -332,7 +333,7 @@ class DataHandler
                             $this->response['code'] = 200;
                             $this->response['message'] = $entityName . ' Updated';
                         } else {
-                            throw new RuntimeException($form->getErrors()->current()->getMessage());
+                            throw new RuntimeException($form->getErrors(true, true)->current()->getMessage());
                         }
                     }
 
@@ -682,7 +683,10 @@ class DataHandler
             $expr = 'eq';
 
             if ($metadata->hasAssociation($field) && $metadata->isCollectionValuedAssociation($field)) {
-                $joinTable = $metadata->getAssociationMapping($field)['joinTable'];
+                $mapping = $metadata->getAssociationMapping($field);
+                $joinTable = isset($mapping['joinTable'])
+                    ? $mapping['joinTable']
+                    : $this->queryHelper->getClassMetadata($mapping['targetEntity'])->getAssociationMappings()[$mapping['mappedBy']];
 
                 if ($joinTable) {
                     $joinColumn = $joinTable['joinColumns'][0]['referencedColumnName'];
@@ -704,7 +708,11 @@ class DataHandler
                     continue;
                 } else {
                     foreach ($rule as $expr => $v) {
-                        if (method_exists($b, $expr))
+                        if (is_numeric($expr))
+                            $c->andWhere(
+                                $b->in($field, $rule)
+                            );
+                        else if (method_exists($b, $expr))
                             $c->andWhere(
                                 $b->{$expr}($field, $v)
                             );
@@ -800,7 +808,10 @@ class DataHandler
                 } elseif ($fieldArray['type'] == 'datetime') {
                     $form->add($key, DateTimeType::class, ['widget' => 'single_text']);
                 } else {
-                    $form->add($key);
+                    if ($fieldArray['type'] === 'array')
+                        $form->add($key, TextType::class);
+                    else
+                        $form->add($key);
                 }
             } else {
                 $form->add($key);
