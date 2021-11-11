@@ -665,6 +665,10 @@ class DataHandler
         return $this->serializeFix($queryWithLimit, $excludes, $includes);
     }
 
+    /**
+     * @throws \Doctrine\ORM\Query\QueryException
+     * @throws \Doctrine\ORM\Mapping\MappingException
+     */
     public function createQuery(ServiceEntityRepository $repo, $criteria, $matching)
     {
         /** @var ClassMetadata $metadata */
@@ -682,16 +686,20 @@ class DataHandler
         foreach ($rules as $field => $rule) {
             $expr = 'eq';
 
-            if ($metadata->hasAssociation($field) && $metadata->isCollectionValuedAssociation($field)) {
+            if ($metadata->hasAssociation($field)) {
                 $mapping = $metadata->getAssociationMapping($field);
-                $joinTable = isset($mapping['joinTable'])
-                    ? $mapping['joinTable']
-                    : $this->queryHelper->getClassMetadata($mapping['targetEntity'])->getAssociationMappings()[$mapping['mappedBy']];
+
+                if ($metadata->isCollectionValuedAssociation($field)) {
+                    $joinTable = $mapping['joinTable'] ?? $this->queryHelper->getClassMetadata($mapping['targetEntity'])->getAssociationMappings()[$mapping['mappedBy']];
+                } else
+                    $joinTable = $mapping;
 
                 if ($joinTable) {
                     $joinColumn = $joinTable['joinColumns'][0]['referencedColumnName'];
                     $alias = $field[0] . $field[1];
-                    $q->innerJoin('e.' . $field, $alias);
+                    $q->leftJoin('e.' . $field, $alias);
+                    $alias = $field;
+                    $q->leftJoin('e.' . $field, $alias);
                     $field = $alias . '.' . $joinColumn;
                 }
             }
