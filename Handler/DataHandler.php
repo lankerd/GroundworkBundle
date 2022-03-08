@@ -640,7 +640,12 @@ class DataHandler
             } else
                 $queryWithLimit = $this->queryHelper->getEntityRepository($outputEntity)->findBy($criteria, $orderBy, $limit, $offset);
 
-            $rowCounts = count($this->queryHelper->getEntityRepository($outputEntity)->findBy($criteria, $orderBy));
+            //$rowCounts = count($this->queryHelper->getEntityRepository($outputEntity)->findBy($criteria, $orderBy));
+            $queryTotal = $this->createQuery($repo, $criteria, isset($vars['matching']) ? $vars['matching'] : []);
+            $queryTotal->select('count(e.id)');
+            $rowCounts = $queryTotal->getQuery()->getSingleScalarResult();
+
+
             $this->response['pagination']['totalRecords'] = $rowCounts;
             $this->response['pagination']['currentPage'] = $page;
             $this->response['pagination']['nextPage'] = $rowCounts > ($offset+$limit) ? $page + 1 : 0;
